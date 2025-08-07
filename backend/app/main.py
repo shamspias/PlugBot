@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .core.config import settings
 from .core.database import Base, db_manager
-from .api.v1 import bots
+from .api.v1 import bots, webhooks
 from .services.bot_manager import bot_manager
 from .models.bot import Bot
 from .utils.logger import get_logger
@@ -61,6 +61,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(bots.router, prefix=settings.API_V1_STR)
+app.include_router(webhooks.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")
