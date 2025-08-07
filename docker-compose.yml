@@ -3,54 +3,55 @@ version: "3.9"
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
     environment:
-      POSTGRES_DB: dify_telegram
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-dify_telegram}
     volumes:
-      - db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # expose *internal* 5432 on whatever host port you picked
+      - "${POSTGRES_HOST_PORT:-5429}:5432"
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     volumes:
       - redis_data:/data
+    ports:
+      - "${REDIS_HOST_PORT:-6387}:6379"
 
   backend:
-    build:
-      context: ./backend
-    env_file:
-      - ./backend/.env.example
+    build: ./backend
+    env_file: .env
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
+      - db
+      - redis
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS}
+      DEBUG: ${APP_DEBUG}
     ports:
-      - "8000:8000"
-    volumes:
-      - ./backend/app:/app/app
-      - ./backend/alembic:/app/alembic
-    command: >
-      bash -c "
-      alembic upgrade head &&
-      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+      - "${BACKEND_PORT:-8531}:8000"
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
-    env_file:
-      - ./frontend/.env.example
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8531/api/v1}
+    env_file: .env
     depends_on:
       - backend
     ports:
-      - "3000:3000"
-    command: [ "npm", "run", "start" ]
+      - "${FRONTEND_PORT:-3514}:3000"
+    restart: unless-stopped
 
 volumes:
-  db_data:
+  postgres_data:
   redis_data:
