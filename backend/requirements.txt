@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+sqlalchemy
+alembic
+psycopg2-binary
+redis
+python-jose
+passlib
+python-multipart
+httpx
+python-telegram-bot
+cryptography
+python-dotenv
