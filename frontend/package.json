@@ -1,0 +1,28 @@
+{
+  "name": "plugbot-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "15.4.6",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "lucide-react": "^0.537.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "15.4.6",
+    "postcss": "^8",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5"
+  }
+}
