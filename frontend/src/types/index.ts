@@ -5,8 +5,6 @@ export interface Bot {
     dify_endpoint: string;
     dify_type: 'chat' | 'agent' | 'chatflow' | 'workflow';
     response_mode: 'streaming' | 'blocking';
-    max_tokens: number;
-    temperature: number;
     auto_generate_title: boolean;
     enable_file_upload: boolean;
     is_active: boolean;
@@ -15,6 +13,8 @@ export interface Bot {
     telegram_bot_token?: string;
     last_health_check?: string;
     health_status: 'healthy' | 'unhealthy' | 'unknown';
+    auth_required: boolean;
+    allowed_email_domains?: string;
     created_at: string;
     updated_at?: string;
 }
@@ -27,10 +27,10 @@ export interface BotCreate {
     dify_type: 'chat' | 'agent' | 'chatflow' | 'workflow';
     telegram_bot_token?: string;
     response_mode: 'streaming' | 'blocking';
-    max_tokens: number;
-    temperature: number;
     auto_generate_title: boolean;
     enable_file_upload: boolean;
+    auth_required: boolean;
+    allowed_email_domains?: string;
 }
 
 export interface BotStatus {
