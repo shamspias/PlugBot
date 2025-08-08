@@ -3,34 +3,42 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: plugbot
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-plugbot}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5429}:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-plugbot}" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - plugbot-network
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "${REDIS_HOST_PORT:-6387}:6379"
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - plugbot-network
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       db:
@@ -38,29 +46,55 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/plugbot
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-plugbot}
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-this}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-32-char-encryption-key-here}
-      BACKEND_CORS_ORIGINS: '["http://localhost:3514","http://frontend:3000"]'
-      DEBUG: false
+      SECRET_KEY: ${SECRET_KEY:-plugbot-insecure-secret-change-this-in-production}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-plugbot-insecure-key-32-chars-here!!}
+      BACKEND_CORS_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3514}","http://frontend:3000"]'
+      DEBUG: ${APP_DEBUG:-false}
     ports:
-      - "8531:8000"
+      - "${BACKEND_PORT:-8531}:8000"
+    volumes:
+      - ./backend/app:/app/app:ro  # Mount app directory as read-only for development
+      - ./backend/alembic:/app/alembic:ro
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    networks:
+      - plugbot-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8531/api/v1
+        NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8531}/api/v1
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
-      - "3514:3000"
+      - "${FRONTEND_PORT:-3514}:3000"
     environment:
       NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8531}/api/v1
+    networks:
+      - plugbot-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
+
+networks:
+  plugbot-network:
+    driver: bridge
