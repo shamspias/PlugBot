@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/plugbot-logo.png" alt="PlugBot Logo" width="160"/>
+</p>
+
 # PlugBot ⚡
 
 _Easily bridge any number of Dify apps to Telegram bots_
@@ -94,9 +98,8 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-
 | Service     | Host URL                                                 | Inside-container URL    |
-| ----------- | -------------------------------------------------------- | ----------------------- |
+|-------------|----------------------------------------------------------|-------------------------|
 | Frontend UI | [http://localhost:3514](http://localhost:3514)           | `http://localhost:3000` |
 | FastAPI API | [http://localhost:8531/docs](http://localhost:8531/docs) | `http://localhost:8000` |
 | PostgreSQL  | `localhost:5432` *(optional)*                            | `postgres://db:5429`    |
