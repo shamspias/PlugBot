@@ -12,6 +12,7 @@ export interface Bot {
     is_active: boolean;
     is_telegram_connected: boolean;
     telegram_bot_username?: string;
+    telegram_bot_token?: string;
     last_health_check?: string;
     health_status: 'healthy' | 'unhealthy' | 'unknown';
     created_at: string;
