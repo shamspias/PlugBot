@@ -72,7 +72,7 @@ def upgrade() -> None:
                     sa.Column('dify_task_id', sa.String(length=255), nullable=True),
                     sa.Column('telegram_message_id', sa.String(length=255), nullable=True),
                     sa.Column('telegram_reply_to_message_id', sa.String(length=255), nullable=True),
-                    sa.Column('metadata', sa.JSON(), nullable=True),
+                    sa.Column('message_metadata', sa.JSON(), nullable=True),  # Changed from 'metadata'
                     sa.Column('tokens_used', sa.Integer(), nullable=True),
                     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
                     sa.ForeignKeyConstraint(['conversation_id'], ['conversations.id'], ondelete='CASCADE'),
