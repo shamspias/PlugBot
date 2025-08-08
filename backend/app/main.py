@@ -8,6 +8,7 @@ from .services.bot_manager import bot_manager
 from .models.bot import Bot
 from .utils.logger import get_logger
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 import asyncio
 
 logger = get_logger(__name__)
@@ -113,7 +114,7 @@ async def health_check():
     db: Session = next(db_manager.get_db())
     try:
         # Check database connection
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db_status = "healthy"
     except Exception as e:
         logger.error(f"Database health check failed: {str(e)}")
