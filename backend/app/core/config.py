@@ -49,6 +49,14 @@ class Settings(BaseSettings):
     # Encryption for sensitive data
     ENCRYPTION_KEY: str = Field(..., env="ENCRYPTION_KEY")
 
+    # SMTP (for email-based auth codes)
+    SMTP_HOST: str | None = Field(default=None, env="SMTP_HOST")
+    SMTP_PORT: int = Field(default=587, env="SMTP_PORT")
+    SMTP_USERNAME: str | None = Field(default=None, env="SMTP_USERNAME")
+    SMTP_PASSWORD: str | None = Field(default=None, env="SMTP_PASSWORD")
+    SMTP_FROM: str = Field(default="no-reply@yourdomain.com", env="SMTP_FROM")
+    SMTP_STARTTLS: bool = Field(default=True, env="SMTP_STARTTLS")
+
     class Config:
         env_file = ".env"
         case_sensitive = True
