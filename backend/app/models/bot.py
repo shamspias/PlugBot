@@ -32,10 +32,12 @@ class Bot(Base):
 
     # Settings
     response_mode = Column(String(20), default="streaming")  # streaming or blocking
-    max_tokens = Column(Integer, default=2000)
-    temperature = Column(Integer, default=7)  # 0-10, will be divided by 10
     auto_generate_title = Column(Boolean, default=True)
     enable_file_upload = Column(Boolean, default=True)
+
+    # Authentication Settings (New)
+    auth_required = Column(Boolean, default=False)
+    allowed_email_domains = Column(Text)  # Comma-separated list of domains
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -43,3 +45,4 @@ class Bot(Base):
 
     # Relationships
     conversations = relationship("Conversation", back_populates="bot", cascade="all, delete-orphan")
+    auth_codes = relationship("AuthCode", back_populates="bot", cascade="all, delete-orphan")

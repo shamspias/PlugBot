@@ -45,13 +45,28 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      # Mailpit is optional but handy in dev for catching emails
+      mailpit:
+        condition: service_started
     environment:
+      # existing
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-plugbot}
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-plugbot-insecure-secret-change-this-in-production}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-plugbot-insecure-key-32-chars-here!!}
       BACKEND_CORS_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3514}","http://frontend:3000"]'
       DEBUG: ${APP_DEBUG:-false}
+
+      # NEW: SMTP for email-based auth codes
+      # In dev with Mailpit set: SMTP_HOST=mailpit, SMTP_PORT=1025, SMTP_STARTTLS=false
+      # In prod with a real provider: set host/creds and keep SMTP_STARTTLS=true
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM:-no-reply@yourdomain.com}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+
     ports:
       - "${BACKEND_PORT:-8531}:8000"
     volumes:
@@ -88,6 +103,16 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # NEW: Local/dev SMTP sink with web UI. Open http://localhost:8025 to view OTP emails.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - plugbot-network
 
 volumes:
   postgres_data:

@@ -1,6 +1,7 @@
 import React from 'react';
 import {BotCreate} from '@/types';
 import {Button} from '@/components/ui/button';
+import {Shield, Info} from 'lucide-react';
 
 interface BotFormProps {
     initialData?: Partial<BotCreate>;
@@ -10,6 +11,7 @@ interface BotFormProps {
 
 interface BotFormState {
     formData: BotCreate;
+    showAuthHelp: boolean;
 }
 
 export class BotForm extends React.Component<BotFormProps, BotFormState> {
@@ -22,12 +24,13 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
             dify_type: 'chat',
             telegram_bot_token: '',
             response_mode: 'streaming',
-            max_tokens: 2000,
-            temperature: 7,
             auto_generate_title: true,
             enable_file_upload: true,
+            auth_required: false,
+            allowed_email_domains: '',
             ...this.props.initialData,
         },
+        showAuthHelp: false,
     };
 
     handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -37,8 +40,7 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
         this.setState(prevState => ({
             formData: {
                 ...prevState.formData,
-                [name]: type === 'checkbox' ? checked :
-                    type === 'number' ? parseInt(value) : value,
+                [name]: type === 'checkbox' ? checked : value,
             },
         }));
     };
@@ -49,17 +51,17 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
     };
 
     render() {
-        const {formData} = this.state;
+        const {formData, showAuthHelp} = this.state;
         const {onCancel} = this.props;
 
         return (
             <form onSubmit={this.handleSubmit} className="space-y-6">
                 {/* Basic Information */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Basic Information</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                             Bot Name *
                         </label>
                         <input
@@ -68,13 +70,13 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             value={formData.name}
                             onChange={this.handleChange}
                             required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                             placeholder="My Dify Bot"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                             Description
                         </label>
                         <textarea
@@ -82,7 +84,7 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             value={formData.description}
                             onChange={this.handleChange}
                             rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
                             placeholder="A helpful AI assistant powered by Dify"
                         />
                     </div>
@@ -90,10 +92,10 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
 
                 {/* Dify Configuration */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Dify Configuration</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Dify Configuration</h3>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                             Dify Endpoint *
                         </label>
                         <input
@@ -102,13 +104,13 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             value={formData.dify_endpoint}
                             onChange={this.handleChange}
                             required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                             placeholder="http://agents.algolyzerlab.com/v1"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                             Dify API Key *
                         </label>
                         <input
@@ -117,21 +119,21 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             value={formData.dify_api_key}
                             onChange={this.handleChange}
                             required={!this.props.initialData}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                             placeholder="app-xxxxxxxxxxxxx"
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Dify Type
                             </label>
                             <select
                                 name="dify_type"
                                 value={formData.dify_type}
                                 onChange={this.handleChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                             >
                                 <option value="chat">Chat</option>
                                 <option value="agent">Agent</option>
@@ -141,14 +143,14 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Response Mode
                             </label>
                             <select
                                 name="response_mode"
                                 value={formData.response_mode}
                                 onChange={this.handleChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                             >
                                 <option value="streaming">Streaming</option>
                                 <option value="blocking">Blocking</option>
@@ -159,10 +161,10 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
 
                 {/* Telegram Configuration */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Telegram Configuration</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Telegram Configuration</h3>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                             Telegram Bot Token (Optional)
                         </label>
                         <input
@@ -170,10 +172,10 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             name="telegram_bot_token"
                             value={formData.telegram_bot_token}
                             onChange={this.handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                             placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
                         />
-                        <p className="mt-1 text-sm text-gray-500">
+                        <p className="mt-2 text-sm text-gray-500">
                             Get your bot token from @BotFather on Telegram
                         </p>
                     </div>
@@ -181,71 +183,102 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
 
                 {/* Advanced Settings */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Advanced Settings</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Advanced Settings</h3>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Max Tokens
-                            </label>
-                            <input
-                                type="number"
-                                name="max_tokens"
-                                value={formData.max_tokens}
-                                onChange={this.handleChange}
-                                min={100}
-                                max={10000}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Temperature (0-10)
-                            </label>
-                            <input
-                                type="number"
-                                name="temperature"
-                                value={formData.temperature}
-                                onChange={this.handleChange}
-                                min={0}
-                                max={10}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="flex items-center space-x-2">
+                    <div className="space-y-3">
+                        <label className="flex items-center space-x-3 cursor-pointer">
                             <input
                                 type="checkbox"
                                 name="auto_generate_title"
                                 checked={formData.auto_generate_title}
                                 onChange={this.handleChange}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
                             />
                             <span className="text-sm font-medium text-gray-700">
-                Auto-generate conversation titles
-              </span>
+                                Auto-generate conversation titles
+                            </span>
                         </label>
 
-                        <label className="flex items-center space-x-2">
+                        <label className="flex items-center space-x-3 cursor-pointer">
                             <input
                                 type="checkbox"
                                 name="enable_file_upload"
                                 checked={formData.enable_file_upload}
                                 onChange={this.handleChange}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
                             />
                             <span className="text-sm font-medium text-gray-700">
-                Enable file uploads
-              </span>
+                                Enable file uploads
+                            </span>
                         </label>
                     </div>
                 </div>
 
+                {/* Authentication Settings */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-blue-600"/>
+                            Authentication Settings
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={() => this.setState({showAuthHelp: !showAuthHelp})}
+                            className="text-blue-600 hover:text-blue-700"
+                        >
+                            <Info className="h-5 w-5"/>
+                        </button>
+                    </div>
+
+                    {showAuthHelp && (
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-800">
+                                When authentication is enabled, users must verify their email address before they can
+                                use the bot.
+                                Only users with email addresses from the specified domains will be allowed to
+                                authenticate.
+                                Users will receive a verification code via email and must enter it in Telegram to gain
+                                access.
+                            </p>
+                        </div>
+                    )}
+
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            name="auth_required"
+                            checked={formData.auth_required}
+                            onChange={this.handleChange}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">
+                            Require email authentication
+                        </span>
+                    </label>
+
+                    {formData.auth_required && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Allowed Email Domains
+                            </label>
+                            <input
+                                type="text"
+                                name="allowed_email_domains"
+                                value={formData.allowed_email_domains}
+                                onChange={this.handleChange}
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                placeholder="algolyzer.com, google.com"
+                            />
+                            <p className="mt-2 text-sm text-gray-500">
+                                Enter comma-separated domain names (e.g., algolyzer.com, google.com).
+                                Only users with email addresses from these domains can authenticate.
+                            </p>
+                        </div>
+                    )}
+                </div>
+
                 {/* Actions */}
-                <div className="flex justify-end space-x-3 pt-4 border-t">
+                <div className="flex justify-end space-x-3 pt-6 border-t">
                     <Button type="button" variant="secondary" onClick={onCancel}>
                         Cancel
                     </Button>

@@ -104,10 +104,10 @@ async def create_bot(bot_data: BotCreate, db: Session = Depends(db_manager.get_d
         dify_api_key=security_manager.encrypt_data(bot_data.dify_api_key),
         dify_type=bot_data.dify_type,
         response_mode=bot_data.response_mode,
-        max_tokens=bot_data.max_tokens,
-        temperature=bot_data.temperature,
         auto_generate_title=bot_data.auto_generate_title,
-        enable_file_upload=bot_data.enable_file_upload
+        enable_file_upload=bot_data.enable_file_upload,
+        auth_required=bot_data.auth_required,
+        allowed_email_domains=bot_data.allowed_email_domains
     )
 
     # Add Telegram token if provided
@@ -129,10 +129,31 @@ async def create_bot(bot_data: BotCreate, db: Session = Depends(db_manager.get_d
     if bot.telegram_bot_token:
         try:
             await bot_manager.start_bot(bot, db)
+            db.refresh(bot)  # << add this line
         except Exception as e:
             logger.error(f"Failed to start bot {bot.name}: {str(e)}")
 
     return bot
+
+
+async def validate_telegram_token(token: str) -> dict:
+    """Validate a Telegram bot token by calling getMe."""
+    if not token or ":" not in token:
+        raise ValueError("Malformed Telegram token")
+    url = f"https://api.telegram.org/bot{token}/getMe"
+    timeout = httpx.Timeout(10.0)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        r = await client.get(url)
+        try:
+            data = r.json()
+        except Exception:
+            raise ValueError(f"Telegram API returned non-JSON: {r.status_code}")
+        if not data.get("ok"):
+            desc = data.get("description", "Unknown error")
+            raise ValueError(f"Telegram getMe failed: {desc}")
+        # Return a tiny struct we use above
+        user = data.get("result") or {}
+        return {"username": user.get("username"), "id": user.get("id")}
 
 
 @router.patch("/{bot_id}", response_model=BotResponse)
@@ -233,7 +254,6 @@ async def delete_bot(bot_id: str, db: Session = Depends(db_manager.get_db)):
     # Delete bot (cascades to conversations and messages)
     db.delete(bot)
     db.commit()
-
     return None
 
 
@@ -378,25 +398,3 @@ async def validate_dify_connection(endpoint: str, api_key: str) -> bool:
             raise ValueError("Connection timeout - endpoint not responding")
         except Exception as e:
             raise ValueError(f"Connection failed: {str(e)}")
-
-
-async def validate_telegram_token(token: str) -> dict:
-    """Validate Telegram bot token and get bot info."""
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        try:
-            response = await client.get(
-                f"https://api.telegram.org/bot{token}/getMe"
-            )
-            data = response.json()
-
-            if not data.get("ok"):
-                raise ValueError(data.get("description", "Invalid token"))
-
-            return {
-                "username": data["result"].get("username"),
-                "first_name": data["result"].get("first_name"),
-                "can_join_groups": data["result"].get("can_join_groups", False),
-                "can_read_all_group_messages": data["result"].get("can_read_all_group_messages", False),
-            }
-        except Exception as e:
-            raise ValueError(f"Token validation failed: {str(e)}")
