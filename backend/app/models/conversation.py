@@ -29,7 +29,7 @@ class Conversation(Base):
     last_message_at = Column(DateTime(timezone=True))
     message_count = Column(Integer, default=0)
 
-    # Metadata
+    # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -58,8 +58,8 @@ class Message(Base):
     telegram_message_id = Column(String(255))
     telegram_reply_to_message_id = Column(String(255))
 
-    # Metadata
-    metadata = Column(JSON)
+    # Message metadata - renamed from 'metadata' to avoid SQLAlchemy reserved word
+    message_metadata = Column(JSON)
     tokens_used = Column(Integer)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
