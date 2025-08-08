@@ -2,16 +2,19 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
-    env_file: .env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-dify_telegram}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: plugbot
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      # expose *internal* 5432 on whatever host port you picked
-      - "${POSTGRES_HOST_PORT:-5429}:5432"
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -19,36 +22,44 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "${REDIS_HOST_PORT:-6387}:6379"
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
-    env_file: .env
-    depends_on:
-      - db
-      - redis
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      SECRET_KEY: ${SECRET_KEY}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS}
-      DEBUG: ${APP_DEBUG}
-    ports:
-      - "${BACKEND_PORT:-8531}:8000"
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/plugbot
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-this}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-32-char-encryption-key-here}
+      BACKEND_CORS_ORIGINS: '["http://localhost:3514","http://frontend:3000"]'
+      DEBUG: false
+    ports:
+      - "8531:8000"
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
   frontend:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8531/api/v1}
-    env_file: .env
+        NEXT_PUBLIC_API_URL: http://localhost:8531/api/v1
+    restart: unless-stopped
     depends_on:
       - backend
     ports:
-      - "${FRONTEND_PORT:-3514}:3000"
-    restart: unless-stopped
+      - "3514:3000"
+    environment:
+      NODE_ENV: production
 
 volumes:
   postgres_data:
