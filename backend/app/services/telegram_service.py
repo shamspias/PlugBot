@@ -1,7 +1,7 @@
-# path: backend/app/services/telegram_service.py
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 from telegram.constants import ParseMode, ChatAction
+from telegram.error import BadRequest
 from typing import Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -196,6 +196,7 @@ class TelegramService:
         # Send message to Dify
         response_text = ""
         message_id = None
+        last_sent_text = None
 
         try:
             async for event in self.dify_service.send_message(
@@ -211,15 +212,19 @@ class TelegramService:
                         if not message_id:
                             msg = await update.message.reply_text(response_text or "...")
                             message_id = msg.message_id
-                        elif len(response_text) % 20 == 0:  # Update every ~20 chars
+                            last_sent_text = response_text or ""
+                        elif len(response_text) % 20 == 0 and response_text != last_sent_text:
                             try:
                                 await context.bot.edit_message_text(
                                     chat_id=chat_id,
                                     message_id=message_id,
                                     text=response_text
                                 )
-                            except:
-                                pass
+                                last_sent_text = response_text
+                            except BadRequest as e:
+                                # Ignore harmless "Message is not modified"
+                                if "Message is not modified" not in str(e):
+                                    raise
 
                 elif event.get("event") == "message_end":
                     # Update conversation ID if first message
@@ -251,11 +256,16 @@ class TelegramService:
                 if self.bot.response_mode == "blocking" or not message_id:
                     await update.message.reply_text(response_text)
                 else:
-                    await context.bot.edit_message_text(
-                        chat_id=chat_id,
-                        message_id=message_id,
-                        text=response_text
-                    )
+                    if response_text != (last_sent_text or ""):
+                        try:
+                            await context.bot.edit_message_text(
+                                chat_id=chat_id,
+                                message_id=message_id,
+                                text=response_text
+                            )
+                        except BadRequest as e:
+                            if "Message is not modified" not in str(e):
+                                raise
             else:
                 await update.message.reply_text("I couldn't generate a response. Please try again.")
 
@@ -335,6 +345,7 @@ class TelegramService:
         await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         response_text = ""
         message_id = None
+        last_sent_text = None
         try:
             async for event in self.dify_service.send_message(
                     message=query_text,
@@ -346,14 +357,17 @@ class TelegramService:
                     response_text += event.get("answer", "")
                     if self.bot.response_mode == "streaming":
                         if not message_id:
-                            msg = await update.message.reply_text(response_text or "...")
+                            msg = await update.message.reply_text(response_text or "…")
                             message_id = msg.message_id
-                        elif len(response_text) % 20 == 0:
+                            last_sent_text = response_text or ""
+                        elif len(response_text) % 20 == 0 and response_text != last_sent_text:
                             try:
                                 await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id,
                                                                     text=response_text)
-                            except:
-                                pass
+                                last_sent_text = response_text
+                            except BadRequest as e:
+                                if "Message is not modified" not in str(e):
+                                    raise
                 elif event.get("event") == "message_end":
                     if not conversation.dify_conversation_id:
                         conversation.dify_conversation_id = event.get("conversation_id")
@@ -375,9 +389,21 @@ class TelegramService:
                 if self.bot.response_mode == "blocking" or not message_id:
                     await update.message.reply_text(response_text)
                 else:
-                    await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=response_text)
+                    if response_text != (last_sent_text or ""):
+                        try:
+                            await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id,
+                                                                text=response_text)
+                        except BadRequest as e:
+                            if "Message is not modified" not in str(e):
+                                raise
             else:
                 await update.message.reply_text("I couldn't generate a response. Please try again.")
+        except BadRequest as e:
+            if "Message is not modified" in str(e):
+                logger.debug("Document stream noop edit ignored")
+            else:
+                logger.error(f"Error handling document message: {str(e)}")
+                await update.message.reply_text("❌ An error occurred. Please try again.")
         except Exception as e:
             logger.error(f"Error handling document message: {str(e)}")
             await update.message.reply_text("❌ An error occurred. Please try again.")
@@ -451,6 +477,7 @@ class TelegramService:
         await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         response_text = ""
         message_id = None
+        last_sent_text = None
         try:
             async for event in self.dify_service.send_message(
                     message=query_text,
@@ -462,14 +489,17 @@ class TelegramService:
                     response_text += event.get("answer", "")
                     if self.bot.response_mode == "streaming":
                         if not message_id:
-                            msg = await update.message.reply_text(response_text or "...")
+                            msg = await update.message.reply_text(response_text or "…")
                             message_id = msg.message_id
-                        elif len(response_text) % 20 == 0:
+                            last_sent_text = response_text or ""
+                        elif len(response_text) % 20 == 0 and response_text != last_sent_text:
                             try:
                                 await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id,
                                                                     text=response_text)
-                            except:
-                                pass
+                                last_sent_text = response_text
+                            except BadRequest as e:
+                                if "Message is not modified" not in str(e):
+                                    raise
                 elif event.get("event") == "message_end":
                     if not conversation.dify_conversation_id:
                         conversation.dify_conversation_id = event.get("conversation_id")
@@ -491,9 +521,21 @@ class TelegramService:
                 if self.bot.response_mode == "blocking" or not message_id:
                     await update.message.reply_text(response_text)
                 else:
-                    await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=response_text)
+                    if response_text != (last_sent_text or ""):
+                        try:
+                            await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id,
+                                                                text=response_text)
+                        except BadRequest as e:
+                            if "Message is not modified" not in str(e):
+                                raise
             else:
                 await update.message.reply_text("I couldn't generate a response. Please try again.")
+        except BadRequest as e:
+            if "Message is not modified" in str(e):
+                logger.debug("Photo stream noop edit ignored")
+            else:
+                logger.error(f"Error handling photo message: {str(e)}")
+                await update.message.reply_text("❌ An error occurred. Please try again.")
         except Exception as e:
             logger.error(f"Error handling photo message: {str(e)}")
             await update.message.reply_text("❌ An error occurred. Please try again.")
