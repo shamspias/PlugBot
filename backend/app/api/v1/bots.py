@@ -173,6 +173,10 @@ async def update_bot(
     # Update bot fields
     update_data = bot_update.dict(exclude_unset=True)
 
+    # If dify_api_key was explicitly set to None (blank in form), ignore it to avoid wiping a valid key
+    if "dify_api_key" in update_data and update_data["dify_api_key"] is None:
+        update_data.pop("dify_api_key")
+
     # Encrypt sensitive data
     if "dify_api_key" in update_data:
         update_data["dify_api_key"] = security_manager.encrypt_data(update_data["dify_api_key"])

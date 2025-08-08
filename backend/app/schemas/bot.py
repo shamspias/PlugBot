@@ -22,10 +22,25 @@ class BotCreate(BotBase):
     telegram_bot_token: Optional[str] = None
 
     @field_validator('dify_endpoint')
-    def validate_endpoint(cls, v):
+    def validate_endpoint(cls, v: str):
         if not v.startswith(('http://', 'https://')):
             raise ValueError('Endpoint must start with http:// or https://')
         return v.rstrip('/')
+
+    @field_validator('dify_api_key')
+    def strip_and_require_api_key(cls, v: str):
+        v = v.strip()
+        if not v:
+            raise ValueError('Dify API key cannot be empty')
+        return v
+
+    @field_validator('telegram_bot_token')
+    def strip_optional_telegram_token(cls, v: Optional[str]):
+        if v is None:
+            return v
+        v = v.strip()
+        # Treat empty string as None
+        return v or None
 
 
 class BotUpdate(BaseModel):
@@ -42,6 +57,23 @@ class BotUpdate(BaseModel):
     auto_generate_title: Optional[bool] = None
     enable_file_upload: Optional[bool] = None
     is_active: Optional[bool] = None
+
+    # Normalize/guard against accidental erasure of secrets
+    @field_validator('dify_endpoint')
+    def normalize_endpoint(cls, v: Optional[str]):
+        if v is None:
+            return v
+        v = v.strip()
+        return v.rstrip('/')
+
+    @field_validator('dify_api_key', 'telegram_bot_token', mode='before')
+    def empty_string_to_none(cls, v):
+        # If the user leaves a secret blank in the edit form, treat it as "no change"
+        if isinstance(v, str):
+            v = v.strip()
+            if v == '':
+                return None
+        return v
 
 
 class BotResponse(BotBase):
