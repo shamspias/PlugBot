@@ -5,8 +5,8 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Dify-Telegram Bridge',
-  description: 'Manage and connect Dify bots with Telegram',
+  title: 'PlugBot',
+  description: 'Manage and connect Dify bots with Telegram and other platforms',
 };
 
 export default function RootLayout({
@@ -23,12 +23,12 @@ export default function RootLayout({
               <div className="flex justify-between h-16">
                 <div className="flex items-center">
                   <h1 className="text-xl font-bold text-gray-900">
-                    Dify-Telegram Bridge
+                    PlugBot
                   </h1>
                 </div>
                 <div className="flex items-center space-x-4">
                   <a
-                    href="https://github.com"
+                    href="https://github.com/shamspias/plugbot"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-gray-500 hover:text-gray-700"
