@@ -1,8 +1,7 @@
-from telegram import Update, Bot as TelegramBot, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 from telegram.constants import ParseMode, ChatAction
-import asyncio
-from typing import Optional, Dict, Any
+from typing import Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
 from ..models.bot import Bot
@@ -49,7 +48,6 @@ class TelegramService:
                 ("history", "Show conversation history")
             ])
 
-            self.running = True
             logger.info(f"Telegram bot {self.bot.name} initialized successfully")
             return True
 
@@ -59,11 +57,24 @@ class TelegramService:
 
     async def start_polling(self):
         """Start polling for updates."""
-        if self.application and not self.running:
-            await self.application.start()
-            await self.application.updater.start_polling(drop_pending_updates=True)
-            self.running = True
-            logger.info(f"Started polling for bot {self.bot.name}")
+        if not self.application:
+            return
+        if self.running:
+            return
+
+        # If a webhook was ever set, clear it so polling gets updates
+        try:
+            info = await self.application.bot.get_webhook_info()
+            if info and info.url:
+                logger.warning("Webhook was set (%s); deleting for polling mode.", info.url)
+                await self.application.bot.delete_webhook(drop_pending_updates=True)
+        except Exception as e:
+            logger.warning("Could not check/delete webhook before polling: %s", e)
+
+        await self.application.start()
+        await self.application.updater.start_polling(drop_pending_updates=True)
+        self.running = True
+        logger.info(f"Started polling for bot {self.bot.name}")
 
     async def stop(self):
         """Stop the bot."""
