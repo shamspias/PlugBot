@@ -13,7 +13,7 @@ import {
     Trash2,
     Activity,
     MessageCircle,
-    Link
+    Link,
 } from 'lucide-react';
 
 interface BotCardProps {
@@ -122,9 +122,7 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                             ) : (
                                 <Badge variant="default">Inactive</Badge>
                             )}
-                            {status?.is_running && (
-                                <Badge variant="info">Running</Badge>
-                            )}
+                            {status?.is_running && <Badge variant="info">Running</Badge>}
                         </div>
                     </div>
                 </CardHeader>
@@ -153,7 +151,12 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                 </span>
                             </div>
                             <div>
-                                <span className="text-gray-500">Conversations:</span>
+                <span
+                    className="text-gray-500"
+                    title="Counts unique Telegram threads for this bot. Use /new or /clear to start a fresh thread or when a new user chats."
+                >
+                  Conversations (unique chats):
+                </span>
                                 <span className="ml-2 font-medium">{status?.conversation_count || 0}</span>
                             </div>
                         </div>
@@ -165,7 +168,10 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                                 <span className="text-sm">
                   Dify:
                   <span
-                      className={`ml-1 font-medium ${bot.health_status === 'healthy' ? 'text-green-600' : 'text-red-600'}`}>
+                      className={`ml-1 font-medium ${
+                          bot.health_status === 'healthy' ? 'text-green-600' : 'text-red-600'
+                      }`}
+                  >
                     {bot.health_status === 'healthy' ? 'Connected' : 'Disconnected'}
                   </span>
                 </span>
@@ -175,7 +181,10 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                                 <span className="text-sm">
                   Telegram:
                   <span
-                      className={`ml-1 font-medium ${bot.is_telegram_connected ? 'text-green-600' : 'text-gray-600'}`}>
+                      className={`ml-1 font-medium ${
+                          bot.is_telegram_connected ? 'text-green-600' : 'text-gray-600'
+                      }`}
+                  >
                     {bot.is_telegram_connected ? 'Connected' : 'Not configured'}
                   </span>
                 </span>
@@ -232,18 +241,10 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                                 </Button>
                             </div>
                             <div className="flex items-center space-x-2">
-                                <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    onClick={() => onEdit(bot)}
-                                >
+                                <Button size="sm" variant="secondary" onClick={() => onEdit(bot)}>
                                     <Settings className="h-4 w-4"/>
                                 </Button>
-                                <Button
-                                    size="sm"
-                                    variant="danger"
-                                    onClick={() => onDelete(bot)}
-                                >
+                                <Button size="sm" variant="danger" onClick={() => onDelete(bot)}>
                                     <Trash2 className="h-4 w-4"/>
                                 </Button>
                             </div>
