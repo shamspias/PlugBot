@@ -163,28 +163,81 @@ class AuthService:
         db.add(token_record)
         db.commit()
 
-        # Send email
+        # Send email with HTML template
         reset_url = f"{settings.FRONTEND_URL}/auth/reset-password?token={reset_token}"
 
         try:
+            # HTML email template
+            html_body = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                    .content {{ background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }}
+                    .button {{ display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                    .footer {{ text-align: center; margin-top: 30px; color: #666; font-size: 12px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Password Reset Request</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hello {user.full_name or user.username},</p>
+
+                        <p>We received a request to reset your password for your PlugBot account.</p>
+
+                        <p>Click the button below to reset your password:</p>
+
+                        <div style="text-align: center;">
+                            <a href="{reset_url}" class="button">Reset Password</a>
+                        </div>
+
+                        <p>Or copy and paste this link into your browser:</p>
+                        <p style="word-break: break-all; background: #fff; padding: 10px; border-radius: 5px;">
+                            {reset_url}
+                        </p>
+
+                        <p><strong>This link will expire in 1 hour for security reasons.</strong></p>
+
+                        <p>If you didn't request this password reset, please ignore this email. Your password won't be changed.</p>
+
+                        <div class="footer">
+                            <p>Best regards,<br>The PlugBot Team</p>
+                            <p>This is an automated message, please do not reply to this email.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
+            # Plain text fallback
+            text_body = f"""
+    Hello {user.full_name or user.username},
+
+    We received a request to reset your password for your PlugBot account.
+
+    Click the link below to reset your password:
+    {reset_url}
+
+    This link will expire in 1 hour for security reasons.
+
+    If you didn't request this password reset, please ignore this email. Your password won't be changed.
+
+    Best regards,
+    The PlugBot Team
+            """
+
             send_email(
                 to_email=user.email,
                 subject="Password Reset Request - PlugBot",
-                body=f"""
-Hello {user.full_name or user.username},
-
-You requested a password reset for your PlugBot account.
-
-Click the link below to reset your password:
-{reset_url}
-
-This link will expire in 1 hour.
-
-If you didn't request this, please ignore this email.
-
-Best regards,
-PlugBot Team
-                """
+                body=text_body,
+                html_body=html_body  # You'll need to update the send_email function to support HTML
             )
         except Exception as e:
             logger.error(f"Failed to send password reset email: {e}")
@@ -242,8 +295,74 @@ PlugBot Team
 
     def _send_verification_email(self, user: User, db: Session):
         """Send email verification."""
-        # Implementation for email verification
-        pass
+        # Generate verification token
+        verification_token = self._generate_token(32)
+
+        # You can store this in a new table or reuse password_reset_tokens table
+        # For simplicity, let's reuse the password reset token table with a flag
+
+        verification_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={verification_token}"
+
+        html_body = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }}
+                .button {{ display: inline-block; padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Welcome to PlugBot!</h1>
+                </div>
+                <div class="content">
+                    <p>Hello {user.full_name or user.username},</p>
+
+                    <p>Thank you for registering with PlugBot. Please verify your email address to complete your registration.</p>
+
+                    <div style="text-align: center;">
+                        <a href="{verification_url}" class="button">Verify Email Address</a>
+                    </div>
+
+                    <p>Or copy and paste this link:</p>
+                    <p style="word-break: break-all; background: #fff; padding: 10px; border-radius: 5px;">
+                        {verification_url}
+                    </p>
+
+                    <p>Best regards,<br>The PlugBot Team</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        text_body = f"""
+    Welcome to PlugBot!
+
+    Hello {user.full_name or user.username},
+
+    Thank you for registering with PlugBot. Please verify your email address by clicking the link below:
+
+    {verification_url}
+
+    Best regards,
+    The PlugBot Team
+        """
+
+        try:
+            send_email(
+                to_email=user.email,
+                subject="Verify Your Email - PlugBot",
+                body=text_body,
+                html_body=html_body
+            )
+        except Exception as e:
+            logger.error(f"Failed to send verification email: {e}")
 
 
 auth_service = AuthService()
