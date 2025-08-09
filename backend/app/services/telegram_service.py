@@ -337,7 +337,7 @@ class TelegramService:
                 self._set_authenticated(user_id, code_row.email)
                 self.redis.delete(self._pending_key(user_id))
                 await update.message.reply_text("✅ Authentication successful! You can now chat.")
-                return True
+                return False
             else:
                 await update.message.reply_text(
                     "❌ Invalid or expired code. Please send your email again."
