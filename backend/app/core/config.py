@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     SMTP_FROM: str = Field(default="no-reply@yourdomain.com", env="SMTP_FROM")
     SMTP_STARTTLS: bool = Field(default=True, env="SMTP_STARTTLS")
 
+    # Registration
+    ALLOW_REGISTRATION: bool = Field(default=False, env="ALLOW_REGISTRATION")
+    FRONTEND_URL: str = Field(default="http://localhost:3514", env="FRONTEND_URL")
+
     class Config:
         env_file = ".env"
         case_sensitive = True
