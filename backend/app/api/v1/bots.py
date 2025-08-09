@@ -13,6 +13,9 @@ from ...services.bot_manager import bot_manager
 from ...services.dify_service import DifyService
 from ...utils.logger import get_logger
 
+from ...api.deps import get_current_user
+from ...models.user import User
+
 router = APIRouter(prefix="/bots", tags=["bots"])
 logger = get_logger(__name__)
 
@@ -22,7 +25,8 @@ async def get_bots(
         skip: int = 0,
         limit: int = 100,
         is_active: Optional[bool] = Query(None, description="Filter by active status"),
-        db: Session = Depends(db_manager.get_db)
+        db: Session = Depends(db_manager.get_db),
+        current_user: User = Depends(get_current_user)
 ):
     """Get all bots with optional filters."""
     query = db.query(Bot)
@@ -129,7 +133,7 @@ async def create_bot(bot_data: BotCreate, db: Session = Depends(db_manager.get_d
     if bot.telegram_bot_token:
         try:
             await bot_manager.start_bot(bot, db)
-            db.refresh(bot)  # << add this line
+            db.refresh(bot)
         except Exception as e:
             logger.error(f"Failed to start bot {bot.name}: {str(e)}")
 
