@@ -82,6 +82,16 @@ class ApiClient {
         });
     }
 
+    async resetPassword(token: string, newPassword: string): Promise<any> {
+        return this.request('/auth/reset-password', {
+            method: 'POST',
+            body: JSON.stringify({
+                token,
+                new_password: newPassword
+            })
+        });
+    }
+
     // ===== Bot endpoints =====
     async getBots(): Promise<Bot[]> {
         return this.request<Bot[]>('/bots', {
