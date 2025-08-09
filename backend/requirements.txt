@@ -13,3 +13,4 @@ httpx
 python-telegram-bot
 cryptography
 python-dotenv
+pydantic[email]
