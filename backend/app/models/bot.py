@@ -24,6 +24,9 @@ class Bot(Base):
     telegram_bot_username = Column(String(255))
     telegram_webhook_secret = Column(String(255))
 
+    # Markdown
+    telegram_markdown_enabled = Column(Boolean, default=False)
+
     # Status
     is_active = Column(Boolean, default=True)
     is_telegram_connected = Column(Boolean, default=False)
