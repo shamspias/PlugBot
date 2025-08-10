@@ -198,6 +198,8 @@ async def update_bot(
     # Update bot fields
     update_data = bot_update.dict(exclude_unset=True)
 
+    ALLOW_NULL = {"telegram_bot_token", "allowed_email_domains", "description"}
+
     # If dify_api_key was explicitly set to None (blank in form), ignore it to avoid wiping a valid key
     if "dify_api_key" in update_data and update_data["dify_api_key"] is None:
         update_data.pop("dify_api_key")
@@ -235,8 +237,18 @@ async def update_bot(
     db.refresh(bot)
 
     # Restart bot if it's running
-    if bot_manager.get_bot_status(bot_id)["is_running"]:
-        await bot_manager.restart_bot(bot, db)
+    should_have_token = bool(bot.telegram_bot_token)
+    status = bot_manager.get_bot_status(bot_id)
+
+    if should_have_token:
+        if status["is_running"]:
+            await bot_manager.restart_bot(bot, db)
+        else:
+            await bot_manager.start_bot(bot, db)
+    else:
+        # If token has been removed, ensure the process is stopped
+        if status["is_running"]:
+            await bot_manager.stop_bot(bot_id)
 
     return bot
 
