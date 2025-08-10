@@ -27,7 +27,6 @@ from ..models.auth import AuthCode
 from ..services.dify_service import DifyService
 from ..utils.logger import get_logger
 
-# Optional helper (you should add backend/app/utils/mailer.py as discussed)
 try:
     from ..utils.mailer import send_email  # send_email(to_email, subject, body)
 except Exception:  # pragma: no cover
@@ -99,6 +98,13 @@ class TelegramService:
                 r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", text.strip()
             )
         )
+
+    # ------- MARKDOWN -------
+
+    def _escape_markdown_v2(self, text: str) -> str:
+        # Basic safe-escape for MarkdownV2 special chars
+        special = r'_*[]()~`>#+-=|{}.!'
+        return ''.join('\\' + c if c in special else c for c in text)
 
     # ---------- LIFECYCLE ----------
 
@@ -437,6 +443,17 @@ class TelegramService:
         self.db.add(user_message)
         self.db.commit()
 
+        # Markdown formatting toggle + helper
+        use_md = bool(getattr(self.bot, "telegram_markdown_enabled", False))
+
+        def _fmt(text: str) -> dict:
+            if use_md:
+                return {
+                    "text": self._escape_markdown_v2(text or "."),
+                    "parse_mode": ParseMode.MARKDOWN_V2,
+                }
+            return {"text": text or "."}
+
         # Send to Dify (streaming or blocking)
         response_text = ""
         message_id = None
@@ -454,13 +471,13 @@ class TelegramService:
                     # Real-time updates (streaming)
                     if self.bot.response_mode == "streaming":
                         if not message_id:
-                            msg = await update.message.reply_text(response_text or ".")
+                            msg = await update.message.reply_text(**_fmt(response_text))
                             message_id = msg.message_id
                             last_sent_text = response_text or ""
                         elif len(response_text) % 20 == 0 and response_text != last_sent_text:
                             try:
                                 await context.bot.edit_message_text(
-                                    chat_id=chat_id, message_id=message_id, text=response_text
+                                    chat_id=chat_id, message_id=message_id, **_fmt(response_text)
                                 )
                                 last_sent_text = response_text
                             except BadRequest as e:
@@ -485,18 +502,20 @@ class TelegramService:
                     self.db.commit()
 
                 elif event.get("event") == "error":
-                    await update.message.reply_text(f"❌ {event.get('message', 'An error occurred')}")
+                    await update.message.reply_text(
+                        f"❌ {event.get('message', 'An error occurred')}"
+                    )
                     return
 
             # Final flush
             if response_text:
                 if self.bot.response_mode == "blocking" or not message_id:
-                    await update.message.reply_text(response_text)
+                    await update.message.reply_text(**_fmt(response_text))
                 else:
                     if response_text != (last_sent_text or ""):
                         try:
                             await context.bot.edit_message_text(
-                                chat_id=chat_id, message_id=message_id, text=response_text
+                                chat_id=chat_id, message_id=message_id, **_fmt(response_text)
                             )
                         except BadRequest as e:
                             if "Message is not modified" not in str(e):
@@ -582,6 +601,17 @@ class TelegramService:
         query_text = caption or "Please analyze the attached file."
         await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
+        # Markdown formatting toggle + helper
+        use_md = bool(getattr(self.bot, "telegram_markdown_enabled", False))
+
+        def _fmt(text: str) -> dict:
+            if use_md:
+                return {
+                    "text": self._escape_markdown_v2(text or "…"),
+                    "parse_mode": ParseMode.MARKDOWN_V2,
+                }
+            return {"text": text or "…"}
+
         response_text = ""
         message_id = None
         last_sent_text = None
@@ -597,13 +627,13 @@ class TelegramService:
                     response_text += event.get("answer", "")
                     if self.bot.response_mode == "streaming":
                         if not message_id:
-                            msg = await update.message.reply_text(response_text or "…")
+                            msg = await update.message.reply_text(**_fmt(response_text))
                             message_id = msg.message_id
                             last_sent_text = response_text or ""
                         elif len(response_text) % 20 == 0 and response_text != last_sent_text:
                             try:
                                 await context.bot.edit_message_text(
-                                    chat_id=chat_id, message_id=message_id, text=response_text
+                                    chat_id=chat_id, message_id=message_id, **_fmt(response_text)
                                 )
                                 last_sent_text = response_text
                             except BadRequest as e:
@@ -627,17 +657,19 @@ class TelegramService:
                     self.db.commit()
 
                 elif event.get("event") == "error":
-                    await update.message.reply_text(f"❌ {event.get('message', 'An error occurred')}")
+                    await update.message.reply_text(
+                        f"❌ {event.get('message', 'An error occurred')}"
+                    )
                     return
 
             if response_text:
                 if self.bot.response_mode == "blocking" or not message_id:
-                    await update.message.reply_text(response_text)
+                    await update.message.reply_text(**_fmt(response_text))
                 else:
                     if response_text != (last_sent_text or ""):
                         try:
                             await context.bot.edit_message_text(
-                                chat_id=chat_id, message_id=message_id, text=response_text
+                                chat_id=chat_id, message_id=message_id, **_fmt(response_text)
                             )
                         except BadRequest as e:
                             if "Message is not modified" not in str(e):
@@ -726,6 +758,17 @@ class TelegramService:
         query_text = caption or "Please analyze this image."
         await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
+        # Markdown formatting toggle + helper
+        use_md = bool(getattr(self.bot, "telegram_markdown_enabled", False))
+
+        def _fmt(text: str) -> dict:
+            if use_md:
+                return {
+                    "text": self._escape_markdown_v2(text or "…"),
+                    "parse_mode": ParseMode.MARKDOWN_V2,
+                }
+            return {"text": text or "…"}
+
         response_text = ""
         message_id = None
         last_sent_text = None
@@ -741,13 +784,13 @@ class TelegramService:
                     response_text += event.get("answer", "")
                     if self.bot.response_mode == "streaming":
                         if not message_id:
-                            msg = await update.message.reply_text(response_text or "…")
+                            msg = await update.message.reply_text(**_fmt(response_text))
                             message_id = msg.message_id
                             last_sent_text = response_text or ""
                         elif len(response_text) % 20 == 0 and response_text != last_sent_text:
                             try:
                                 await context.bot.edit_message_text(
-                                    chat_id=chat_id, message_id=message_id, text=response_text
+                                    chat_id=chat_id, message_id=message_id, **_fmt(response_text)
                                 )
                                 last_sent_text = response_text
                             except BadRequest as e:
@@ -770,17 +813,19 @@ class TelegramService:
                     self.db.commit()
 
                 elif event.get("event") == "error":
-                    await update.message.reply_text(f"❌ {event.get('message', 'An error occurred')}")
+                    await update.message.reply_text(
+                        f"❌ {event.get('message', 'An error occurred')}"
+                    )
                     return
 
             if response_text:
                 if self.bot.response_mode == "blocking" or not message_id:
-                    await update.message.reply_text(response_text)
+                    await update.message.reply_text(**_fmt(response_text))
                 else:
                     if response_text != (last_sent_text or ""):
                         try:
                             await context.bot.edit_message_text(
-                                chat_id=chat_id, message_id=message_id, text=response_text
+                                chat_id=chat_id, message_id=message_id, **_fmt(response_text)
                             )
                         except BadRequest as e:
                             if "Message is not modified" not in str(e):
