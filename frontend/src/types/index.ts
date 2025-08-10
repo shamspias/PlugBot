@@ -7,6 +7,7 @@ export interface Bot {
     response_mode: 'streaming' | 'blocking';
     auto_generate_title: boolean;
     enable_file_upload: boolean;
+    telegram_markdown_enabled: boolean;
     is_active: boolean;
     is_telegram_connected: boolean;
     telegram_bot_username?: string;
@@ -29,6 +30,7 @@ export interface BotCreate {
     response_mode: 'streaming' | 'blocking';
     auto_generate_title: boolean;
     enable_file_upload: boolean;
+    telegram_markdown_enabled: boolean;
     auth_required: boolean;
     allowed_email_domains?: string;
 }

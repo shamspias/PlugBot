@@ -14,9 +14,23 @@ interface BotFormState {
     showAuthHelp: boolean;
 }
 
+// Keys that are booleans in BotCreate
+const BOOLEAN_KEYS = new Set<keyof BotCreate>([
+    'auto_generate_title',
+    'enable_file_upload',
+    'auth_required',
+    'telegram_markdown_enabled',
+]);
+
+// Narrowed literal unions for select fields
+type DifyType = BotCreate['dify_type'];
+type ResponseMode = BotCreate['response_mode'];
+
 export class BotForm extends React.Component<BotFormProps, BotFormState> {
-    state: BotFormState = {
-        formData: {
+    constructor(props: BotFormProps) {
+        super(props);
+
+        const defaults: BotCreate = {
             name: '',
             description: '',
             dify_endpoint: '',
@@ -28,26 +42,73 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
             enable_file_upload: true,
             auth_required: false,
             allowed_email_domains: '',
-            ...this.props.initialData,
-        },
-        showAuthHelp: false,
-    };
+            telegram_markdown_enabled: false,
+        };
 
-    handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const {name, value, type} = e.target;
-        const checked = (e.target as HTMLInputElement).checked;
+        const incoming = props.initialData ?? {};
+        const merged: BotCreate = {...defaults, ...incoming};
 
-        this.setState(prevState => ({
+        // ensure booleans are never undefined
+        merged.auto_generate_title =
+            incoming.auto_generate_title ?? defaults.auto_generate_title;
+        merged.enable_file_upload =
+            incoming.enable_file_upload ?? defaults.enable_file_upload;
+        merged.auth_required = incoming.auth_required ?? defaults.auth_required;
+        merged.telegram_markdown_enabled =
+            incoming.telegram_markdown_enabled ?? defaults.telegram_markdown_enabled;
+
+        this.state = {
+            formData: merged,
+            showAuthHelp: false,
+        };
+    }
+
+    handleChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    ) => {
+        const target = e.target as HTMLInputElement;
+        const name = target.name as keyof BotCreate;
+
+        let nextValue: BotCreate[typeof name];
+
+        if (BOOLEAN_KEYS.has(name)) {
+            // checkbox controls
+            nextValue = (target.type === 'checkbox'
+                ? target.checked
+                : target.value === 'true') as BotCreate[typeof name];
+        } else if (name === 'dify_type') {
+            nextValue = target.value as DifyType as BotCreate[typeof name];
+        } else if (name === 'response_mode') {
+            nextValue = target.value as ResponseMode as BotCreate[typeof name];
+        } else {
+            nextValue = target.value as BotCreate[typeof name];
+        }
+
+        this.setState((prev) => ({
+            ...prev,
             formData: {
-                ...prevState.formData,
-                [name]: type === 'checkbox' ? checked : value,
+                ...prev.formData,
+                [name]: nextValue,
             },
         }));
     };
 
     handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        this.props.onSubmit(this.state.formData);
+
+        const clean = (s?: string) => (s ?? '').trim();
+
+        const payload: BotCreate = {
+            ...this.state.formData,
+            name: clean(this.state.formData.name),
+            description: clean(this.state.formData.description),
+            dify_endpoint: clean(this.state.formData.dify_endpoint),
+            dify_api_key: clean(this.state.formData.dify_api_key),
+            telegram_bot_token: clean(this.state.formData.telegram_bot_token),
+            allowed_email_domains: clean(this.state.formData.allowed_email_domains),
+        };
+
+        this.props.onSubmit(payload);
     };
 
     render() {
@@ -182,36 +243,45 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                 </div>
 
                 {/* Advanced Settings */}
-                <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Advanced Settings</h3>
+                <div className="space-y-3">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            name="auto_generate_title"
+                            checked={!!formData.auto_generate_title}
+                            onChange={this.handleChange}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">
+              Auto-generate conversation titles
+            </span>
+                    </label>
 
-                    <div className="space-y-3">
-                        <label className="flex items-center space-x-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                name="auto_generate_title"
-                                checked={formData.auto_generate_title}
-                                onChange={this.handleChange}
-                                className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
-                            />
-                            <span className="text-sm font-medium text-gray-700">
-                                Auto-generate conversation titles
-                            </span>
-                        </label>
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            name="enable_file_upload"
+                            checked={!!formData.enable_file_upload}
+                            onChange={this.handleChange}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">
+              Enable file uploads
+            </span>
+                    </label>
 
-                        <label className="flex items-center space-x-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                name="enable_file_upload"
-                                checked={formData.enable_file_upload}
-                                onChange={this.handleChange}
-                                className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
-                            />
-                            <span className="text-sm font-medium text-gray-700">
-                                Enable file uploads
-                            </span>
-                        </label>
-                    </div>
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            name="telegram_markdown_enabled"
+                            checked={!!formData.telegram_markdown_enabled}
+                            onChange={this.handleChange}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">
+              Use Markdown formatting in Telegram
+            </span>
+                    </label>
                 </div>
 
                 {/* Authentication Settings */}
@@ -234,11 +304,9 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                             <p className="text-sm text-blue-800">
                                 When authentication is enabled, users must verify their email address before they can
-                                use the bot.
-                                Only users with email addresses from the specified domains will be allowed to
-                                authenticate.
-                                Users will receive a verification code via email and must enter it in Telegram to gain
-                                access.
+                                use the bot. Only users with email addresses from the specified domains will be allowed
+                                to authenticate. Users will receive a verification code via email and must enter it in
+                                Telegram to gain access.
                             </p>
                         </div>
                     )}
@@ -247,13 +315,13 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                         <input
                             type="checkbox"
                             name="auth_required"
-                            checked={formData.auth_required}
+                            checked={!!formData.auth_required}
                             onChange={this.handleChange}
                             className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm font-medium text-gray-700">
-                            Require email authentication
-                        </span>
+              Require email authentication
+            </span>
                     </label>
 
                     {formData.auth_required && (

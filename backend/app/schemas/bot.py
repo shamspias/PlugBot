@@ -12,6 +12,7 @@ class BotBase(BaseModel):
     response_mode: str = Field(default="streaming", pattern="^(streaming|blocking)$")
     auto_generate_title: bool = True
     enable_file_upload: bool = True
+    telegram_markdown_enabled: bool = False
 
     # Authentication settings
     auth_required: bool = False
@@ -74,6 +75,7 @@ class BotUpdate(BaseModel):
     is_active: Optional[bool] = None
     auth_required: Optional[bool] = None
     allowed_email_domains: Optional[str] = None
+    telegram_markdown_enabled: Optional[bool] = None
 
     @field_validator('dify_endpoint')
     def normalize_endpoint(cls, v: Optional[str]):
