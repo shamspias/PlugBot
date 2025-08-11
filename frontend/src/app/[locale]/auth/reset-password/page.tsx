@@ -5,11 +5,13 @@ import {useRouter, useSearchParams} from 'next/navigation';
 import Link from 'next/link';
 import {Lock, Eye, EyeOff, CheckCircle, AlertCircle, Shield, KeyRound} from 'lucide-react';
 import {apiClient} from '@/lib/api/client';
+import {useTranslations} from 'next-intl';
 
 function ResetPasswordForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
+    const t = useTranslations('auth.resetPassword');
 
     const [formData, setFormData] = useState({
         password: '',
@@ -24,11 +26,12 @@ function ResetPasswordForm() {
 
     useEffect(() => {
         if (!token) {
-            setError('Invalid or missing reset token');
+            setError(t('errors.invalidToken'));
             setTokenValid(false);
         } else {
             setTokenValid(true);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token]);
 
     const checkPasswordStrength = (password: string) => {
@@ -55,12 +58,12 @@ function ResetPasswordForm() {
         setError('');
 
         if (!token) {
-            setError('Reset token is missing');
+            setError(t('errors.invalidToken'));
             return;
         }
 
         if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match');
+            setError(t('errors.passwordMismatch'));
             return;
         }
 
@@ -81,7 +84,7 @@ function ResetPasswordForm() {
             }, 3000);
         } catch (err: any) {
             if (err.message?.includes('expired') || err.message?.includes('invalid')) {
-                setError('This reset link has expired or is invalid. Please request a new one.');
+                setError(t('errors.invalidToken'));
             } else {
                 setError(err.message || 'Failed to reset password');
             }
@@ -119,16 +122,17 @@ function ResetPasswordForm() {
                                 className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6 animate-bounce">
                                 <CheckCircle className="w-10 h-10 text-green-600"/>
                             </div>
-                            <h2 className="text-3xl font-bold text-gray-900 mb-4">Password Reset Successful!</h2>
+                            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                                {t('success.title')}
+                            </h2>
                             <p className="text-gray-600 mb-6">
-                                Your password has been successfully reset. You will be redirected to the login page in a
-                                few seconds.
+                                {t('success.message')}
                             </p>
                             <div className="flex justify-center">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
                             </div>
                             <p className="mt-6 text-sm text-gray-500">
-                                Redirecting to login...
+                                {t('success.redirecting')}
                             </p>
                         </div>
                     </div>
@@ -152,17 +156,18 @@ function ResetPasswordForm() {
                                 className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6">
                                 <AlertCircle className="w-10 h-10 text-red-600"/>
                             </div>
-                            <h2 className="text-2xl font-bold text-gray-900 mb-4">Invalid Reset Link</h2>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                                {t('errors.invalidToken')}
+                            </h2>
                             <p className="text-gray-600 mb-6">
-                                This password reset link is invalid or has expired. Please request a new password reset
-                                link.
+                                {t('errors.invalidToken')}
                             </p>
                             <div className="space-y-3">
                                 <Link
                                     href="/auth/forgot-password"
                                     className="block w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all text-center"
                                 >
-                                    Request New Reset Link
+                                    {t('errors.requestNew')}
                                 </Link>
                                 <Link
                                     href="/auth/login"
@@ -205,12 +210,12 @@ function ResetPasswordForm() {
                             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"/>
                             <div>
                                 <p className="text-sm text-red-700">{error}</p>
-                                {error.includes('expired') && (
+                                {error.includes(t('errors.invalidToken')) && (
                                     <Link
                                         href="/auth/forgot-password"
                                         className="text-sm text-red-800 underline mt-1 inline-block hover:text-red-900"
                                     >
-                                        Request a new reset link →
+                                        {t('errors.requestNew')} →
                                     </Link>
                                 )}
                             </div>
@@ -222,8 +227,10 @@ function ResetPasswordForm() {
                         <Shield className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"/>
                         <div className="text-sm text-blue-700">
                             <p className="font-medium mb-1">Security Requirements:</p>
-                            <p>Your new password must be different from your previous password and meet all security
-                                criteria below.</p>
+                            <p>
+                                Your new password must be different from your previous password and meet all security
+                                criteria below.
+                            </p>
                         </div>
                     </div>
 
@@ -258,12 +265,17 @@ function ResetPasswordForm() {
                                 <div className="mt-3">
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="text-xs text-gray-500">Password Strength</span>
-                                        <span className={`text-xs font-medium ${
-                                            passwordStrength <= 2 ? 'text-red-600' :
-                                                passwordStrength <= 3 ? 'text-yellow-600' :
-                                                    passwordStrength <= 4 ? 'text-blue-600' :
-                                                        'text-green-600'
-                                        }`}>
+                                        <span
+                                            className={`text-xs font-medium ${
+                                                passwordStrength <= 2
+                                                    ? 'text-red-600'
+                                                    : passwordStrength <= 3
+                                                        ? 'text-yellow-600'
+                                                        : passwordStrength <= 4
+                                                            ? 'text-blue-600'
+                                                            : 'text-green-600'
+                                            }`}
+                                        >
                       {getPasswordStrengthText()}
                     </span>
                                     </div>
@@ -288,14 +300,14 @@ function ResetPasswordForm() {
                                                 <div
                                                     className={`w-4 h-4 rounded-full flex items-center justify-center ${
                                                         req.check ? 'bg-green-100' : 'bg-gray-100'
-                                                    }`}>
-                                                    <CheckCircle className={`w-3 h-3 ${
-                                                        req.check ? 'text-green-600' : 'text-gray-400'
-                                                    }`}/>
+                                                    }`}
+                                                >
+                                                    <CheckCircle
+                                                        className={`w-3 h-3 ${req.check ? 'text-green-600' : 'text-gray-400'}`}
+                                                    />
                                                 </div>
-                                                <span className={req.check ? 'text-green-700' : 'text-gray-500'}>
-                          {req.text}
-                        </span>
+                                                <span
+                                                    className={req.check ? 'text-green-700' : 'text-gray-500'}>{req.text}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -328,9 +340,11 @@ function ResetPasswordForm() {
                                     </div>
                                 )}
                             </div>
-                            {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                                <p className="mt-2 text-sm text-red-600">Passwords do not match</p>
-                            )}
+                            {formData.password &&
+                                formData.confirmPassword &&
+                                formData.password !== formData.confirmPassword && (
+                                    <p className="mt-2 text-sm text-red-600">{t('errors.passwordMismatch')}</p>
+                                )}
                         </div>
 
                         <button
@@ -340,31 +354,41 @@ function ResetPasswordForm() {
                         >
                             {loading ? (
                                 <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
-                       fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                            strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                  >
+                    <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                    ></circle>
+                    <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
-                  Resetting Password...
+                                    {t('resetting')}
                 </span>
                             ) : (
-                                'Reset Password'
+                                t('resetPassword')
                             )}
                         </button>
                     </form>
 
                     {/* Back to Login Link */}
                     <div className="mt-6 text-center">
-                        <Link
-                            href="/auth/login"
-                            className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
-                        >
+                        <Link href="/auth/login"
+                              className="text-sm text-gray-600 hover:text-gray-800 transition-colors">
                             Remember your password?
-                            <span className="ml-1 text-purple-600 hover:text-purple-700 font-medium">
-                Back to Login
-              </span>
+                            <span
+                                className="ml-1 text-purple-600 hover:text-purple-700 font-medium">Back to Login</span>
                         </Link>
                     </div>
                 </div>
@@ -375,11 +399,13 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
     return (
-        <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-            </div>
-        }>
+        <Suspense
+            fallback={
+                <div className="min-h-screen flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+                </div>
+            }
+        >
             <ResetPasswordForm/>
         </Suspense>
     );
