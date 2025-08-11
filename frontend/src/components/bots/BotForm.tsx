@@ -1,12 +1,16 @@
 import React from 'react';
+import {useTranslations} from 'next-intl';
 import {BotCreate} from '@/types';
 import {Button} from '@/components/ui/button';
 import {Shield, Info} from 'lucide-react';
 
-interface BotFormProps {
+type T = ReturnType<typeof useTranslations>;
+
+interface BotFormInnerProps {
     initialData?: Partial<BotCreate>;
     onSubmit: (data: BotCreate) => void;
     onCancel: () => void;
+    t: T;
 }
 
 interface BotFormState {
@@ -26,8 +30,8 @@ const BOOLEAN_KEYS = new Set<keyof BotCreate>([
 type DifyType = BotCreate['dify_type'];
 type ResponseMode = BotCreate['response_mode'];
 
-export class BotForm extends React.Component<BotFormProps, BotFormState> {
-    constructor(props: BotFormProps) {
+class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
+    constructor(props: BotFormInnerProps) {
         super(props);
 
         const defaults: BotCreate = {
@@ -72,7 +76,6 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
         let nextValue: BotCreate[typeof name];
 
         if (BOOLEAN_KEYS.has(name)) {
-            // checkbox controls
             nextValue = (target.type === 'checkbox'
                 ? target.checked
                 : target.value === 'true') as BotCreate[typeof name];
@@ -113,17 +116,19 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
 
     render() {
         const {formData, showAuthHelp} = this.state;
-        const {onCancel} = this.props;
+        const {onCancel, t} = this.props;
 
         return (
             <form onSubmit={this.handleSubmit} className="space-y-6">
                 {/* Basic Information */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                        {t('form.sections.basic')}
+                    </h3>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Bot Name *
+                            {t('form.fields.name')} *
                         </label>
                         <input
                             type="text"
@@ -132,13 +137,13 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             onChange={this.handleChange}
                             required
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            placeholder="My Dify Bot"
+                            placeholder={t('form.fields.namePlaceholder')}
                         />
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Description
+                            {t('form.fields.description')}
                         </label>
                         <textarea
                             name="description"
@@ -146,18 +151,20 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             onChange={this.handleChange}
                             rows={3}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                            placeholder="A helpful AI assistant powered by Dify"
+                            placeholder={t('form.fields.descriptionPlaceholder')}
                         />
                     </div>
                 </div>
 
                 {/* Dify Configuration */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Dify Configuration</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                        {t('form.sections.dify')}
+                    </h3>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Dify Endpoint *
+                            {t('form.fields.difyEndpoint')} *
                         </label>
                         <input
                             type="url"
@@ -166,13 +173,13 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             onChange={this.handleChange}
                             required
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            placeholder="http://agents.algolyzerlab.com/v1"
+                            placeholder={t('form.fields.difyEndpointPlaceholder')}
                         />
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Dify API Key *
+                            {t('form.fields.difyApiKey')} *
                         </label>
                         <input
                             type="password"
@@ -181,14 +188,14 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             onChange={this.handleChange}
                             required={!this.props.initialData}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            placeholder="app-xxxxxxxxxxxxx"
+                            placeholder={t('form.fields.difyApiKeyPlaceholder')}
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Dify Type
+                                {t('form.fields.difyType')}
                             </label>
                             <select
                                 name="dify_type"
@@ -196,16 +203,16 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                                 onChange={this.handleChange}
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                             >
-                                <option value="chat">Chat</option>
-                                <option value="agent">Agent</option>
-                                <option value="chatflow">Chatflow</option>
-                                <option value="workflow">Workflow</option>
+                                <option value="chat">{t('form.options.difyType.chat')}</option>
+                                <option value="agent">{t('form.options.difyType.agent')}</option>
+                                <option value="chatflow">{t('form.options.difyType.chatflow')}</option>
+                                <option value="workflow">{t('form.options.difyType.workflow')}</option>
                             </select>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Response Mode
+                                {t('form.fields.responseMode')}
                             </label>
                             <select
                                 name="response_mode"
@@ -213,8 +220,12 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                                 onChange={this.handleChange}
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                             >
-                                <option value="streaming">Streaming</option>
-                                <option value="blocking">Blocking</option>
+                                <option value="streaming">
+                                    {t('form.options.responseMode.streaming')}
+                                </option>
+                                <option value="blocking">
+                                    {t('form.options.responseMode.blocking')}
+                                </option>
                             </select>
                         </div>
                     </div>
@@ -222,11 +233,13 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
 
                 {/* Telegram Configuration */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Telegram Configuration</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                        {t('form.sections.telegram')}
+                    </h3>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Telegram Bot Token (Optional)
+                            {t('form.fields.telegramToken')}
                         </label>
                         <input
                             type="password"
@@ -234,10 +247,10 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             value={formData.telegram_bot_token}
                             onChange={this.handleChange}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
+                            placeholder={t('form.fields.telegramTokenPlaceholder')}
                         />
                         <p className="mt-2 text-sm text-gray-500">
-                            Get your bot token from @BotFather on Telegram
+                            {t('form.fields.telegramTokenHelp')}
                         </p>
                     </div>
                 </div>
@@ -253,7 +266,7 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm font-medium text-gray-700">
-              Auto-generate conversation titles
+              {t('form.fields.autoGenerateTitle')}
             </span>
                     </label>
 
@@ -266,7 +279,7 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm font-medium text-gray-700">
-              Enable file uploads
+              {t('form.fields.enableFileUpload')}
             </span>
                     </label>
 
@@ -279,7 +292,7 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm font-medium text-gray-700">
-              Use Markdown formatting in Telegram
+              {t('form.fields.telegramMarkdown')}
             </span>
                     </label>
                 </div>
@@ -289,12 +302,13 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                     <div className="flex items-center justify-between">
                         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                             <Shield className="h-5 w-5 text-blue-600"/>
-                            Authentication Settings
+                            {t('form.sections.auth')}
                         </h3>
                         <button
                             type="button"
                             onClick={() => this.setState({showAuthHelp: !showAuthHelp})}
                             className="text-blue-600 hover:text-blue-700"
+                            aria-label={t('form.actions.toggleAuthHelp')}
                         >
                             <Info className="h-5 w-5"/>
                         </button>
@@ -302,12 +316,7 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
 
                     {showAuthHelp && (
                         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <p className="text-sm text-blue-800">
-                                When authentication is enabled, users must verify their email address before they can
-                                use the bot. Only users with email addresses from the specified domains will be allowed
-                                to authenticate. Users will receive a verification code via email and must enter it in
-                                Telegram to gain access.
-                            </p>
+                            <p className="text-sm text-blue-800">{t('form.authHelp')}</p>
                         </div>
                     )}
 
@@ -320,14 +329,14 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                             className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm font-medium text-gray-700">
-              Require email authentication
+              {t('form.fields.authRequired')}
             </span>
                     </label>
 
                     {formData.auth_required && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Allowed Email Domains
+                                {t('form.fields.allowedDomains')}
                             </label>
                             <input
                                 type="text"
@@ -335,11 +344,10 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                                 value={formData.allowed_email_domains}
                                 onChange={this.handleChange}
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                placeholder="algolyzer.com, google.com"
+                                placeholder={t('form.fields.allowedDomainsPlaceholder')}
                             />
                             <p className="mt-2 text-sm text-gray-500">
-                                Enter comma-separated domain names (e.g., algolyzer.com, google.com).
-                                Only users with email addresses from these domains can authenticate.
+                                {t('form.fields.allowedDomainsHelp')}
                             </p>
                         </div>
                     )}
@@ -348,13 +356,21 @@ export class BotForm extends React.Component<BotFormProps, BotFormState> {
                 {/* Actions */}
                 <div className="flex justify-end space-x-3 pt-6 border-t">
                     <Button type="button" variant="secondary" onClick={onCancel}>
-                        Cancel
+                        {t('form.buttons.cancel')}
                     </Button>
                     <Button type="submit" variant="primary">
-                        {this.props.initialData ? 'Update Bot' : 'Create Bot'}
+                        {this.props.initialData ? t('form.buttons.update') : t('form.buttons.create')}
                     </Button>
                 </div>
             </form>
         );
     }
+}
+
+// Wrapper to inject translations
+export function BotForm(
+    props: Omit<React.ComponentProps<typeof BotFormInner>, 't'>
+) {
+    const t = useTranslations('bots');
+    return <BotFormInner {...props} t={t}/>;
 }
