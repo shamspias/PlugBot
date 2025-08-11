@@ -1,6 +1,6 @@
 from typing import Optional, List
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, field_validator
 from secrets import token_urlsafe
 
 
@@ -46,9 +46,6 @@ class Settings(BaseSettings):
     # Telegram
     TELEGRAM_WEBHOOK_URL: Optional[str] = Field(None, env="TELEGRAM_WEBHOOK_URL")
 
-    # Encryption for sensitive data
-    ENCRYPTION_KEY: str = Field(..., env="ENCRYPTION_KEY")
-
     # SMTP (for email-based auth codes)
     SMTP_HOST: str | None = Field(default=None, env="SMTP_HOST")
     SMTP_PORT: int = Field(default=587, env="SMTP_PORT")
@@ -60,6 +57,18 @@ class Settings(BaseSettings):
     # Registration
     ALLOW_REGISTRATION: bool = Field(default=False, env="ALLOW_REGISTRATION")
     FRONTEND_URL: str = Field(default="http://localhost:3514", env="FRONTEND_URL")
+
+    # Localization
+    DEFAULT_LANGUAGE: str = Field(default="ru", env="DEFAULT_LANGUAGE")
+
+    @field_validator('DEFAULT_LANGUAGE')
+    def validate_language(cls, v: str):
+        """Validate that the language is supported."""
+        supported_languages = ['en', 'ru']
+        if v.lower() not in supported_languages:
+            # Fallback to English if unsupported language
+            return 'en'
+        return v.lower()
 
     class Config:
         env_file = ".env"
