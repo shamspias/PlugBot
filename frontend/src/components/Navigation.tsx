@@ -1,7 +1,7 @@
 'use client';
 
 import {useAuth} from '@/contexts/AuthContext';
-import {useTranslations} from 'next-intl';
+import {useTranslations, useLocale} from 'next-intl';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {LogOut, User} from 'lucide-react';
@@ -11,6 +11,7 @@ export default function Navigation() {
     const {user, logout} = useAuth();
     const pathname = usePathname();
     const t = useTranslations('nav');
+    const locale = useLocale();
 
     // Don't show navigation on auth pages
     if (pathname.includes('/auth')) {
@@ -26,7 +27,10 @@ export default function Navigation() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between h-16">
                     <div className="flex items-center">
-                        <Link href="/dashboard" className="text-xl font-bold text-gray-900">
+                        <Link
+                            href={`/${locale}/dashboard`}
+                            className="text-xl font-bold text-gray-900"
+                        >
                             {t('title')}
                         </Link>
                     </div>
