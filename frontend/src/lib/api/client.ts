@@ -4,7 +4,14 @@ class ApiClient {
     private baseUrl: string;
 
     constructor() {
-        this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8531/api/v1';
+        // this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8531/api/v1';
+        this.baseUrl = '/api';
+
+    }
+
+    async get(path: string) {
+        const res = await fetch(`${this.baseUrl}${path}`);
+        return res.json();
     }
 
     private getAuthHeaders(): HeadersInit {
