@@ -4,14 +4,20 @@ class ApiClient {
     private baseUrl: string;
 
     constructor() {
-        // this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8531/api/v1';
-        this.baseUrl = '/api';
+        // Use the full HTTPS URL directly, no proxying
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8531/api/v1';
 
-    }
+        // Force HTTPS in production
+        if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+            this.baseUrl = apiUrl.replace(/^http:/, 'https:');
+        } else {
+            this.baseUrl = apiUrl;
+        }
 
-    async get(path: string) {
-        const res = await fetch(`${this.baseUrl}${path}`);
-        return res.json();
+        // Ensure no trailing slash
+        this.baseUrl = this.baseUrl.replace(/\/$/, '');
+
+        console.log('API Client initialized with baseUrl:', this.baseUrl);
     }
 
     private getAuthHeaders(): HeadersInit {
@@ -23,12 +29,24 @@ class ApiClient {
     }
 
     private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-        const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        // Ensure endpoint starts with /
+        const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+        const url = `${this.baseUrl}${normalizedEndpoint}`;
+
+        // Log the request URL in development
+        if (process.env.NODE_ENV === 'development') {
+            console.log('API Request:', url);
+        }
+
+        const response = await fetch(url, {
             ...options,
             headers: {
                 'Content-Type': 'application/json',
+                ...this.getAuthHeaders(),
                 ...options?.headers,
             },
+            // Ensure credentials are included for CORS
+            credentials: 'include',
         });
 
         if (!response.ok) {
@@ -48,7 +66,6 @@ class ApiClient {
         return this.request('/auth/login', {
             method: 'POST',
             body: JSON.stringify({email, password}),
-            headers: this.getAuthHeaders(),
         });
     }
 
@@ -56,28 +73,23 @@ class ApiClient {
         return this.request('/auth/register', {
             method: 'POST',
             body: JSON.stringify(data),
-            headers: this.getAuthHeaders(),
         });
     }
 
     async logout(): Promise<void> {
         return this.request('/auth/logout', {
             method: 'POST',
-            headers: this.getAuthHeaders(),
         });
     }
 
     async getCurrentUser(): Promise<any> {
-        return this.request('/auth/me', {
-            headers: this.getAuthHeaders(),
-        });
+        return this.request('/auth/me');
     }
 
     async refreshAccessToken(refreshToken: string): Promise<any> {
         return this.request('/auth/refresh', {
             method: 'POST',
             body: JSON.stringify({refresh_token: refreshToken}),
-            headers: this.getAuthHeaders(),
         });
     }
 
@@ -85,7 +97,6 @@ class ApiClient {
         return this.request('/auth/forgot-password', {
             method: 'POST',
             body: JSON.stringify({email}),
-            headers: this.getAuthHeaders(),
         });
     }
 
@@ -101,28 +112,21 @@ class ApiClient {
 
     // ===== Bot endpoints =====
     async getBots(): Promise<Bot[]> {
-        return this.request<Bot[]>('/bots', {
-            headers: this.getAuthHeaders(),
-        });
+        return this.request<Bot[]>('/bots');
     }
 
     async getBot(id: string): Promise<Bot> {
-        return this.request<Bot>(`/bots/${id}`, {
-            headers: this.getAuthHeaders(),
-        });
+        return this.request<Bot>(`/bots/${id}`);
     }
 
     async getBotStatus(id: string): Promise<BotStatus> {
-        return this.request<BotStatus>(`/bots/${id}/status`, {
-            headers: this.getAuthHeaders(),
-        });
+        return this.request<BotStatus>(`/bots/${id}/status`);
     }
 
     async createBot(data: BotCreate): Promise<Bot> {
         return this.request<Bot>('/bots', {
             method: 'POST',
             body: JSON.stringify(data),
-            headers: this.getAuthHeaders(),
         });
     }
 
@@ -130,51 +134,43 @@ class ApiClient {
         return this.request<Bot>(`/bots/${id}`, {
             method: 'PATCH',
             body: JSON.stringify(data),
-            headers: this.getAuthHeaders(),
         });
     }
 
     async deleteBot(id: string): Promise<void> {
         return this.request<void>(`/bots/${id}`, {
             method: 'DELETE',
-            headers: this.getAuthHeaders(),
         });
     }
 
     async startBot(id: string): Promise<{ message: string }> {
         return this.request<{ message: string }>(`/bots/${id}/start`, {
             method: 'POST',
-            headers: this.getAuthHeaders(),
         });
     }
 
     async stopBot(id: string): Promise<{ message: string }> {
         return this.request<{ message: string }>(`/bots/${id}/stop`, {
             method: 'POST',
-            headers: this.getAuthHeaders(),
         });
     }
 
     async restartBot(id: string): Promise<{ message: string }> {
         return this.request<{ message: string }>(`/bots/${id}/restart`, {
             method: 'POST',
-            headers: this.getAuthHeaders(),
         });
     }
 
     async healthCheck(id: string): Promise<any> {
         return this.request<any>(`/bots/${id}/health-check`, {
             method: 'POST',
-            headers: this.getAuthHeaders(),
         });
     }
 
     // ===== Conversation endpoints =====
     async getConversations(botId?: string): Promise<Conversation[]> {
         const params = botId ? `?bot_id=${encodeURIComponent(botId)}` : '';
-        return this.request<Conversation[]>(`/conversations${params}`, {
-            headers: this.getAuthHeaders(),
-        });
+        return this.request<Conversation[]>(`/conversations${params}`);
     }
 }
 
