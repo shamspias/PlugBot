@@ -4,6 +4,7 @@ x-env: &default-env
 
 networks:
   plugbot-network:
+    driver: bridge
 
 volumes:
   postgres_data:
@@ -15,12 +16,12 @@ services:
     restart: unless-stopped
     <<: *default-env
     environment:
-      # keep image-specific init args here; everything else comes from .env
       POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "${POSTGRES_HOST_PORT}:5432"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
@@ -32,12 +33,9 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    <<: *default-env
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
-    ports:
-      - "${REDIS_HOST_PORT}:6379"
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
@@ -57,18 +55,26 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      # optional in dev, safe to keep
-      mailpit:
-        condition: service_started
-    # all runtime env (DATABASE_URL, REDIS_URL, CORS, SMTP, etc.) come from .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM}
+      SMTP_STARTTLS: ${SMTP_STARTTLS}
+      DEFAULT_LANGUAGE: ${DEFAULT_LANGUAGE}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION}
+      FRONTEND_URL: ${FRONTEND_URL}
     ports:
       - "${BACKEND_PORT}:8000"
-    volumes:
-      - ./backend/app:/app/app:ro
-      - ./backend/alembic:/app/alembic:ro
     command: >
       sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
@@ -82,33 +88,22 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # comes from .env; ensures `docker compose build` picks up changes
+        # CRITICAL: Pass the HTTPS URL at build time
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     restart: unless-stopped
-    <<: *default-env
     depends_on:
       backend:
         condition: service_healthy
+    environment:
+      NODE_ENV: production
+      # Runtime environment (for reference, but build-time is what matters)
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     ports:
       - "${FRONTEND_PORT}:3000"
-    environment:
-      # keep NODE_ENV here or move to .env if you prefer
-      NODE_ENV: production
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000" ]
       interval: 30s
       timeout: 10s
       retries: 3
-    networks:
-      - plugbot-network
-
-  # local/dev SMTP sink with web UI
-  mailpit:
-    image: axllent/mailpit:latest
-    restart: unless-stopped
-    ports:
-      - "1025:1025"   # SMTP
-      - "8025:8025"   # Web UI
     networks:
       - plugbot-network
