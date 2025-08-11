@@ -44,12 +44,15 @@
       "signUp": "Sign up",
       "invalidCredentials": "Invalid email or password",
       "emailPlaceholder": "you@example.com",
-      "passwordPlaceholder": "••••••••"
+      "passwordPlaceholder": "••••••••",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
     },
     "register": {
       "title": "Create Account",
       "subtitle": "Join PlugBot to manage your bots",
-      "fullName": "Full Name (Optional)",
+      "fullName": "Full Name",
+      "fullNameOptional": "Full Name (Optional)",
       "username": "Username",
       "email": "Email Address",
       "password": "Password",
@@ -77,6 +80,14 @@
         "weakPassword": "Password does not meet all requirements",
         "emailTaken": "Email already registered",
         "usernameTaken": "Username already taken"
+      },
+      "showPassword": "Show password",
+      "placeholders": {
+        "fullName": "John Doe",
+        "username": "your_username",
+        "email": "you@example.com",
+        "password": "••••••••",
+        "confirmPassword": "••••••••"
       }
     },
     "forgotPassword": {
@@ -86,6 +97,9 @@
       "sendResetLink": "Send Reset Link",
       "sending": "Sending...",
       "backToLogin": "Back to Login",
+      "errors": {
+        "generic": "Failed to send reset email"
+      },
       "checkEmail": {
         "title": "Check Your Email",
         "message": "We've sent a password reset link to",
@@ -113,11 +127,16 @@
   "bots": {
     "title": "Bot Management",
     "subtitle": "Connect your Dify applications with Telegram",
+    "header": {
+      "title": "Bot Management",
+      "description": "Connect your Dify applications with Telegram"
+    },
     "addBot": "Add Bot",
     "addFirstBot": "Add Your First Bot",
     "noBots": "No bots configured",
     "noBotsDescription": "Get started by adding your first bot",
     "loadingBots": "Loading bots...",
+    "loading": "Loading bots...",
     "refreshing": "Refreshing...",
     "actions": {
       "start": "Start",
@@ -125,7 +144,9 @@
       "restart": "Restart",
       "checkHealth": "Check Health",
       "delete": "Delete Bot",
-      "edit": "Edit Bot"
+      "edit": "Edit Bot",
+      "refresh": "Refresh",
+      "add": "Add Bot"
     },
     "status": {
       "type": "Type",
@@ -154,7 +175,7 @@
         "description": "Description",
         "descriptionPlaceholder": "A helpful AI assistant powered by Dify",
         "difyEndpoint": "Dify Endpoint",
-        "difyEndpointPlaceholder": "http://agents.algolyzerlab.com/v1",
+        "difyEndpointPlaceholder": "https://dify.ai/v1",
         "difyApiKey": "Dify API Key",
         "difyApiKeyPlaceholder": "app-xxxxxxxxxxxxx",
         "difyType": "Dify Type",
@@ -165,16 +186,33 @@
         "autoGenerateTitle": "Auto-generate conversation titles",
         "enableFileUpload": "Enable file uploads",
         "enableMarkdown": "Use Markdown formatting in Telegram",
+        "telegramMarkdown": "Use Markdown formatting in Telegram",
         "authRequired": "Require email authentication",
         "allowedDomains": "Allowed Email Domains",
-        "allowedDomainsPlaceholder": "algolyzer.com, google.com",
+        "allowedDomainsPlaceholder": "yandex.ru, google.com",
         "allowedDomainsHelp": "Enter comma-separated domain names. Only users with email addresses from these domains can authenticate."
+      },
+      "options": {
+        "difyType": {
+          "application": "Application",
+          "workflow": "Workflow",
+          "agent": "Agent",
+          "chatflow": "Chatflow",
+          "chat": "Chat"
+        },
+        "responseMode": {
+          "streaming": "Streaming (token-by-token)",
+          "blocking": "Blocking (wait for full response)"
+        }
       },
       "authHelp": "When authentication is enabled, users must verify their email address before they can use the bot. Only users with email addresses from the specified domains will be allowed to authenticate. Users will receive a verification code via email and must enter it in Telegram to gain access.",
       "buttons": {
         "create": "Create Bot",
         "update": "Update Bot",
         "cancel": "Cancel"
+      },
+      "actions": {
+        "toggleAuthHelp": "Show authentication help"
       }
     },
     "deleteConfirm": {
