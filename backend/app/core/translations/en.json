@@ -1,0 +1,43 @@
+{
+  "bot": {
+    "welcome": "🤖 Welcome to {bot_name}!\n\n{description}\n\nCommands:\n/help - Show this help message\n/new - Start a new conversation\n/clear - Clear current conversation\n/history - Show recent conversations\n/logout - Log out and re-authenticate\n\nJust send me a message to start chatting!",
+    "welcome_no_desc": "🤖 Welcome to {bot_name}!\n\nI am your AI assistant powered by Dify.\n\nCommands:\n/help - Show this help message\n/new - Start a new conversation\n/clear - Clear current conversation\n/history - Show recent conversations\n/logout - Log out and re-authenticate\n\nJust send me a message to start chatting!",
+    "new_conversation": "✨ Started a new conversation. Send me your message!",
+    "conversation_cleared": "🧹 Cleared. Your next message will start a new conversation.",
+    "nothing_to_clear": "Nothing to clear. You're already fresh ✨",
+    "no_history": "No conversation history found.",
+    "recent_conversations": "📚 Recent Conversations:",
+    "switched_conversation": "✅ Switched to conversation: {title}",
+    "untitled_conversation": "Untitled",
+    "logout_success": "✅ You have been logged out. Send your email to authenticate again.",
+    "file_upload_disabled": "File uploads are disabled for this bot.",
+    "file_size_exceeded": "File size exceeds 15MB limit.",
+    "file_upload_failed": "❌ Failed to upload file.",
+    "photo_upload_failed": "❌ Failed to upload photo.",
+    "no_response": "I couldn't generate a response. Please try again.",
+    "error_occurred": "❌ An error occurred. Please try again.",
+    "uploaded_file": "[uploaded file: {filename}]",
+    "uploaded_photo": "[uploaded photo]",
+    "analyze_file": "Please analyze the attached file.",
+    "analyze_image": "Please analyze this image."
+  },
+  "auth": {
+    "required": "🔐 Please send your email to authenticate{domains_hint}.",
+    "domains_hint": " (allowed domains: {domains})",
+    "invalid_code": "❌ Invalid or expired code. Please send your email again.",
+    "email_not_allowed": "🚫 Email not allowed. Allowed domains: {domains}",
+    "code_sent": "📧 I've emailed you a 6-digit code. Reply here with the code to continue (expires in 5 minutes).",
+    "email_failed": "❌ Could not send email. Please try again later.",
+    "success": "✅ Authentication successful! You can now chat.",
+    "email_subject": "Your {bot_name} verification code",
+    "email_body": "Your verification code is: {code}\nIt expires in 5 minutes."
+  },
+  "conversation": {
+    "status_active": "🟢",
+    "status_inactive": "⚪"
+  },
+  "errors": {
+    "dify_error": "❌ {message}",
+    "generic_error": "An error occurred"
+  }
+}
