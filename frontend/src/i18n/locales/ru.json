@@ -17,9 +17,9 @@
     "active": "Активен",
     "inactive": "Неактивен",
     "unknown": "Неизвестно",
-    "healthy": "Исправен",
-    "unhealthy": "Неисправен",
-    "running": "Работает",
+    "healthy": "Работает",
+    "unhealthy": "Не работает",
+    "running": "Запущен",
     "stopped": "Остановлен",
     "yes": "Да",
     "no": "Нет"
@@ -33,7 +33,7 @@
   "auth": {
     "login": {
       "title": "С возвращением",
-      "subtitle": "Войдите в панель управления PlugBot",
+      "subtitle": "Войдите, чтобы получить доступ к панели PlugBot",
       "email": "Электронная почта",
       "password": "Пароль",
       "rememberMe": "Запомнить меня",
@@ -43,24 +43,27 @@
       "noAccount": "Нет аккаунта?",
       "signUp": "Зарегистрироваться",
       "invalidCredentials": "Неверный email или пароль",
-      "emailPlaceholder": "вы@example.com",
-      "passwordPlaceholder": "••••••••"
+      "emailPlaceholder": "you@example.com",
+      "passwordPlaceholder": "••••••••",
+      "showPassword": "Показать пароль",
+      "hidePassword": "Скрыть пароль"
     },
     "register": {
       "title": "Создать аккаунт",
-      "subtitle": "Присоединяйтесь к PlugBot для управления ботами",
-      "fullName": "Полное имя (необязательно)",
+      "subtitle": "Присоединяйтесь к PlugBot для управления вашими ботами",
+      "fullName": "Полное имя",
+      "fullNameOptional": "Полное имя (необязательно)",
       "username": "Имя пользователя",
       "email": "Электронная почта",
       "password": "Пароль",
-      "confirmPassword": "Подтвердите пароль",
+      "confirmPassword": "Подтверждение пароля",
       "createAccount": "Создать аккаунт",
       "creatingAccount": "Создание аккаунта...",
       "alreadyHaveAccount": "Уже есть аккаунт?",
       "signIn": "Войти",
       "passwordRequirements": {
         "title": "Требования к паролю",
-        "length": "Минимум 8 символов",
+        "length": "Не менее 8 символов",
         "uppercase": "Одна заглавная буква",
         "lowercase": "Одна строчная буква",
         "number": "Одна цифра",
@@ -75,49 +78,65 @@
       "errors": {
         "passwordMismatch": "Пароли не совпадают",
         "weakPassword": "Пароль не соответствует всем требованиям",
-        "emailTaken": "Email уже зарегистрирован",
-        "usernameTaken": "Имя пользователя уже занято"
+        "emailTaken": "Эта почта уже зарегистрирована",
+        "usernameTaken": "Это имя пользователя уже занято"
+      },
+      "showPassword": "Показать пароль",
+      "placeholders": {
+        "fullName": "Иван Иванов",
+        "username": "ваше_имя",
+        "email": "вы@example.com",
+        "password": "••••••••",
+        "confirmPassword": "••••••••"
       }
     },
     "forgotPassword": {
       "title": "Забыли пароль?",
-      "subtitle": "Введите email для получения ссылки сброса",
+      "subtitle": "Введите вашу почту, чтобы получить ссылку для сброса",
       "email": "Электронная почта",
-      "sendResetLink": "Отправить ссылку",
+      "sendResetLink": "Отправить ссылку для сброса",
       "sending": "Отправка...",
-      "backToLogin": "Вернуться к входу",
+      "backToLogin": "Назад к входу",
+      "errors": {
+        "generic": "Не удалось отправить письмо для сброса пароля"
+      },
       "checkEmail": {
-        "title": "Проверьте почту",
+        "title": "Проверьте вашу почту",
         "message": "Мы отправили ссылку для сброса пароля на",
-        "backToLogin": "Вернуться к входу"
+        "backToLogin": "Назад к входу"
       }
     },
     "resetPassword": {
       "title": "Сброс пароля",
-      "subtitle": "Введите новый пароль",
+      "subtitle": "Введите новый пароль ниже",
       "newPassword": "Новый пароль",
-      "confirmPassword": "Подтвердите новый пароль",
+      "confirmPassword": "Подтверждение нового пароля",
       "resetPassword": "Сбросить пароль",
       "resetting": "Сброс пароля...",
       "success": {
         "title": "Пароль успешно сброшен!",
         "message": "Ваш пароль был успешно изменен. Вы будете перенаправлены на страницу входа через несколько секунд.",
-        "redirecting": "Перенаправление..."
+        "redirecting": "Перенаправление на вход..."
       },
       "errors": {
-        "invalidToken": "Эта ссылка для сброса пароля недействительна или истекла. Пожалуйста, запросите новую ссылку.",
+        "invalidToken": "Эта ссылка для сброса недействительна или устарела. Пожалуйста, запросите новую.",
         "requestNew": "Запросить новую ссылку"
       }
     }
   },
   "bots": {
     "title": "Управление ботами",
-    "subtitle": "Подключайте приложения Dify к Telegram",
+    "subtitle": "Подключите ваши Dify-приложения к Telegram",
+    "header": {
+      "title": "Управление ботами",
+      "description": "Подключите ваши Dify-приложения к Telegram"
+    },
     "addBot": "Добавить бота",
-    "addFirstBot": "Добавить первого бота",
+    "addFirstBot": "Добавьте первого бота",
     "noBots": "Нет настроенных ботов",
-    "noBotsDescription": "Начните с добавления первого бота",
+    "noBotsDescription": "Начните с добавления вашего первого бота",
     "loadingBots": "Загрузка ботов...",
+    "loading": "Загрузка ботов...",
     "refreshing": "Обновление...",
     "actions": {
       "start": "Запустить",
@@ -125,7 +144,9 @@
       "restart": "Перезапустить",
       "checkHealth": "Проверить состояние",
       "delete": "Удалить бота",
-      "edit": "Редактировать"
+      "edit": "Редактировать бота",
+      "refresh": "Обновить",
+      "add": "Добавить бота"
     },
     "status": {
       "type": "Тип",
@@ -134,47 +155,64 @@
       "conversations": "Диалоги (уникальные чаты)",
       "difyConnection": "Dify",
       "telegramConnection": "Telegram",
-      "connected": "Подключен",
-      "disconnected": "Отключен",
-      "notConfigured": "Не настроен"
+      "connected": "Подключено",
+      "disconnected": "Отключено",
+      "notConfigured": "Не настроено"
     },
     "form": {
       "createTitle": "Создать нового бота",
       "editTitle": "Редактировать бота",
       "sections": {
         "basic": "Основная информация",
-        "dify": "Настройки Dify",
-        "telegram": "Настройки Telegram",
-        "auth": "Настройки авторизации",
-        "advanced": "Дополнительные настройки"
+        "dify": "Конфигурация Dify",
+        "telegram": "Конфигурация Telegram",
+        "auth": "Настройки аутентификации",
+        "advanced": "Расширенные настройки"
       },
       "fields": {
         "name": "Имя бота",
-        "namePlaceholder": "Мой Dify бот",
+        "namePlaceholder": "Мой Dify-бот",
         "description": "Описание",
-        "descriptionPlaceholder": "Полезный ИИ-помощник на базе Dify",
-        "difyEndpoint": "Конечная точка Dify",
-        "difyEndpointPlaceholder": "http://agents.algolyzerlab.com/v1",
-        "difyApiKey": "API ключ Dify",
+        "descriptionPlaceholder": "Полезный AI-ассистент на базе Dify",
+        "difyEndpoint": "Dify Endpoint",
+        "difyEndpointPlaceholder": "https://dify.ai/v1",
+        "difyApiKey": "Dify API ключ",
         "difyApiKeyPlaceholder": "app-xxxxxxxxxxxxx",
         "difyType": "Тип Dify",
         "responseMode": "Режим ответа",
-        "telegramToken": "Токен Telegram бота (необязательно)",
+        "telegramToken": "Токен Telegram-бота (необязательно)",
         "telegramTokenPlaceholder": "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz",
-        "telegramTokenHelp": "Получите токен бота у @BotFather в Telegram",
+        "telegramTokenHelp": "Получите токен у @BotFather в Telegram",
         "autoGenerateTitle": "Автоматически генерировать заголовки диалогов",
         "enableFileUpload": "Разрешить загрузку файлов",
-        "enableMarkdown": "Использовать Markdown форматирование в Telegram",
-        "authRequired": "Требовать авторизацию по email",
+        "enableMarkdown": "Использовать форматирование Markdown в Telegram",
+        "telegramMarkdown": "Использовать форматирование Markdown в Telegram",
+        "authRequired": "Требовать email-аутентификацию",
         "allowedDomains": "Разрешенные домены email",
-        "allowedDomainsPlaceholder": "algolyzer.com, google.com",
-        "allowedDomainsHelp": "Введите домены через запятую. Только пользователи с email от этих доменов смогут авторизоваться."
+        "allowedDomainsPlaceholder": "yandex.ru, mail.ru",
+        "allowedDomainsHelp": "Введите домены через запятую. Только пользователи с адресами из этих доменов смогут пройти аутентификацию."
       },
-      "authHelp": "При включенной авторизации пользователи должны подтвердить свой email перед использованием бота. Только пользователи с email от указанных доменов смогут авторизоваться. Пользователи получат код подтверждения на email и должны будут ввести его в Telegram.",
+      "options": {
+        "difyType": {
+          "application": "Приложение",
+          "workflow": "Рабочий процесс",
+          "agent": "Агент",
+          "chatflow": "Чат-флоу",
+          "chat": "Чат"
+        },
+        "responseMode": {
+          "streaming": "Потоковый (токен за токеном)",
+          "blocking": "Блокирующий (ждать полный ответ)"
+        }
+      },
+      "authHelp": "Когда аутентификация включена, пользователи должны подтвердить свой email, прежде чем использовать бота. Только адреса из указанных доменов будут допущены. Пользователь получит код подтверждения по email и должен ввести его в Telegram для доступа.",
       "buttons": {
         "create": "Создать бота",
         "update": "Обновить бота",
         "cancel": "Отмена"
+      },
+      "actions": {
+        "toggleAuthHelp": "Показать справку по аутентификации"
       }
     },
     "deleteConfirm": {
@@ -192,18 +230,18 @@
       "stopFailed": "Не удалось остановить бота",
       "restartFailed": "Не удалось перезапустить бота",
       "healthCheckFailed": "Не удалось проверить состояние",
-      "invalidEndpoint": "Неверная конечная точка Dify",
-      "invalidApiKey": "Неверный API ключ",
+      "invalidEndpoint": "Некорректный Dify endpoint",
+      "invalidApiKey": "Некорректный API ключ",
       "nameExists": "Бот с таким именем уже существует"
     }
   },
   "errors": {
     "general": "Произошла ошибка",
-    "network": "Сетевая ошибка",
+    "network": "Ошибка сети",
     "unauthorized": "Не авторизован",
     "forbidden": "Доступ запрещен",
     "notFound": "Не найдено",
     "serverError": "Ошибка сервера",
-    "tryAgain": "Пожалуйста, попробуйте снова"
+    "tryAgain": "Попробуйте снова"
   }
 }
