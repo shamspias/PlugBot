@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from contextlib import asynccontextmanager
 from .core.config import settings
 from .core.database import Base, db_manager
@@ -79,10 +80,38 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# Add Trusted Host middleware to prevent host header attacks
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["*"]  # Configure this based on your domains
+)
+
+# Configure CORS with explicit HTTPS support
+cors_origins = settings.BACKEND_CORS_ORIGINS
+
+# Ensure HTTPS versions of origins are included
+https_origins = []
+for origin in cors_origins:
+    https_origins.append(origin)
+    # If an HTTP origin is specified, also add its HTTPS version
+    if origin.startswith("http://"):
+        https_origins.append(origin.replace("http://", "https://"))
+    # If no protocol is specified, add both
+    elif not origin.startswith("https://") and not origin.startswith("http://"):
+        https_origins.append(f"https://{origin}")
+        https_origins.append(f"http://{origin}")
+
+# Add localhost for development
+if settings.DEBUG:
+    https_origins.extend([
+        "http://localhost:3000",
+        "http://localhost:3514",
+        "http://localhost:3001",
+    ])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origins=https_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
