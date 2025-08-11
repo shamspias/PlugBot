@@ -5,11 +5,18 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 FROM node:18-alpine AS builder
+# CRITICAL: Accept build argument and set as environment variable
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+# Log the API URL during build for debugging
+RUN echo "Building with API URL: $NEXT_PUBLIC_API_URL"
+
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Build the application with the environment variable
 RUN npm run build
 
 FROM node:18-alpine AS runner

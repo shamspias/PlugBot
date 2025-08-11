@@ -9,11 +9,25 @@ const nextConfig = {
     experimental: {
         outputFileTracingRoot: undefined,
     },
-    async rewrites() {
+    // Remove rewrites - we'll use direct API calls instead
+    // This prevents any HTTP/HTTPS confusion
+
+    // Ensure environment variables are available at build time
+    env: {
+        NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    },
+
+    // Add security headers
+    async headers() {
         return [
             {
-                source: '/api/:path*',
-                destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8531/api/v1'}/:path*`,
+                source: '/:path*',
+                headers: [
+                    {
+                        key: 'Content-Security-Policy',
+                        value: "upgrade-insecure-requests",
+                    },
+                ],
             },
         ];
     },

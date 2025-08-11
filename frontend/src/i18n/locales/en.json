@@ -61,6 +61,13 @@
       "creatingAccount": "Creating account...",
       "alreadyHaveAccount": "Already have an account?",
       "signIn": "Sign in",
+      "requirements": {
+        "minChars": "At least 8 characters",
+        "uppercase": "One uppercase letter",
+        "lowercase": "One lowercase letter",
+        "number": "One number",
+        "special": "One special character"
+      },
       "passwordRequirements": {
         "title": "Password Requirements",
         "length": "At least 8 characters",
