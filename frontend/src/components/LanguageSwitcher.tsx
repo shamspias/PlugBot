@@ -4,14 +4,20 @@ import {useLocale} from 'next-intl';
 import {useRouter, usePathname} from 'next/navigation';
 import {locales, localeNames, type Locale} from '@/i18n/config';
 import {Globe} from 'lucide-react';
-import {useState, useRef, useEffect} from 'react';
+import {useState, useRef, useEffect, useMemo} from 'react';
 
 export default function LanguageSwitcher() {
     const locale = useLocale() as Locale;
     const router = useRouter();
-    const pathname = usePathname();
+    const pathname = usePathname() || '/';
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Build a regex like: ^/(en|ru|de)(?=/|$)
+    const localePattern = useMemo(
+        () => new RegExp(`^/(${locales.join('|')})(?=/|$)`),
+        []
+    );
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -25,11 +31,14 @@ export default function LanguageSwitcher() {
     }, []);
 
     const handleLanguageChange = (newLocale: Locale) => {
-        // Get the current pathname without locale
-        const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}/, '') || '/';
+        // Safely remove the *leading* locale segment only
+        const pathWithoutLocale = pathname.replace(localePattern, '') || '/';
 
         // Navigate to the new locale path
-        router.push(`/${newLocale}${pathWithoutLocale}`);
+        const target =
+            pathWithoutLocale === '/' ? `/${newLocale}` : `/${newLocale}${pathWithoutLocale}`;
+
+        router.push(target);
         setIsOpen(false);
     };
 
@@ -39,6 +48,7 @@ export default function LanguageSwitcher() {
                 onClick={() => setIsOpen(!isOpen)}
                 className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
                 aria-label="Change language"
+                aria-expanded={isOpen}
             >
                 <Globe className="w-4 h-4"/>
                 <span className="text-sm font-medium">{localeNames[locale]}</span>
@@ -47,6 +57,7 @@ export default function LanguageSwitcher() {
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
+                    aria-hidden="true"
                 >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
                 </svg>
@@ -58,14 +69,14 @@ export default function LanguageSwitcher() {
                     {locales.map((loc) => (
                         <button
                             key={loc}
-                            onClick={() => handleLanguageChange(loc)}
+                            onClick={() => handleLanguageChange(loc as Locale)}
                             className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center justify-between ${
                                 loc === locale ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
                             }`}
                         >
-                            <span>{localeNames[loc]}</span>
+                            <span>{localeNames[loc as Locale]}</span>
                             {loc === locale && (
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                     <path
                                         fillRule="evenodd"
                                         d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
