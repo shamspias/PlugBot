@@ -10,6 +10,11 @@ import {Button} from '@/components/ui/button';
 import {Plus, RefreshCw, Bot as BotIcon} from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
+// ADD: next-intl
+import {useTranslations} from 'next-intl';
+
+type T = ReturnType<typeof useTranslations>;
+
 interface AppState {
     bots: Bot[];
     loading: boolean;
@@ -21,7 +26,8 @@ interface AppState {
     deletingBot: Bot | null;
 }
 
-export default class Home extends React.Component<{}, AppState> {
+// CHANGE: class accepts `t` prop
+class DashboardInner extends React.Component<{ t: T }, AppState> {
     state: AppState = {
         bots: [],
         loading: true,
@@ -44,7 +50,10 @@ export default class Home extends React.Component<{}, AppState> {
             this.setState({bots, loading: false});
         } catch (error) {
             this.setState({
-                error: error instanceof Error ? error.message : 'Failed to fetch bots',
+                error:
+                    error instanceof Error
+                        ? error.message
+                        : this.props.t('errors.fetchFailed'),
                 loading: false,
             });
         }
@@ -56,7 +65,11 @@ export default class Home extends React.Component<{}, AppState> {
             this.setState({showCreateModal: false});
             await this.fetchBots();
         } catch (error) {
-            alert(error instanceof Error ? error.message : 'Failed to create bot');
+            alert(
+                error instanceof Error
+                    ? error.message
+                    : this.props.t('errors.createFailed'),
+            );
         }
     };
 
@@ -68,7 +81,11 @@ export default class Home extends React.Component<{}, AppState> {
             this.setState({showEditModal: false, editingBot: null});
             await this.fetchBots();
         } catch (error) {
-            alert(error instanceof Error ? error.message : 'Failed to update bot');
+            alert(
+                error instanceof Error
+                    ? error.message
+                    : this.props.t('errors.updateFailed'),
+            );
         }
     };
 
@@ -80,11 +97,16 @@ export default class Home extends React.Component<{}, AppState> {
             this.setState({showDeleteConfirm: false, deletingBot: null});
             await this.fetchBots();
         } catch (error) {
-            alert(error instanceof Error ? error.message : 'Failed to delete bot');
+            alert(
+                error instanceof Error
+                    ? error.message
+                    : this.props.t('errors.deleteFailed'),
+            );
         }
     };
 
     render() {
+        const {t} = this.props;
         const {
             bots,
             loading,
@@ -103,17 +125,28 @@ export default class Home extends React.Component<{}, AppState> {
                     <div className="mb-8">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h2 className="text-3xl font-bold text-gray-900">Bot Management</h2>
-                                <p className="mt-2 text-gray-600">Connect your Dify applications with Telegram</p>
+                                <h2 className="text-3xl font-bold text-gray-900">
+                                    {t('header.title')}
+                                </h2>
+                                <p className="mt-2 text-gray-600">{t('header.description')}</p>
                             </div>
                             <div className="flex items-center space-x-3">
-                                <Button variant="secondary" onClick={this.fetchBots} disabled={loading}>
-                                    <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`}/>
-                                    Refresh
+                                <Button
+                                    variant="secondary"
+                                    onClick={this.fetchBots}
+                                    disabled={loading}
+                                >
+                                    <RefreshCw
+                                        className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`}
+                                    />
+                                    {t('actions.refresh')}
                                 </Button>
-                                <Button variant="primary" onClick={() => this.setState({showCreateModal: true})}>
+                                <Button
+                                    variant="primary"
+                                    onClick={() => this.setState({showCreateModal: true})}
+                                >
                                     <Plus className="h-4 w-4 mr-2"/>
-                                    Add Bot
+                                    {t('actions.add')}
                                 </Button>
                             </div>
                         </div>
@@ -131,17 +164,22 @@ export default class Home extends React.Component<{}, AppState> {
                         <div className="flex items-center justify-center py-12">
                             <div className="text-center">
                                 <RefreshCw className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4"/>
-                                <p className="text-gray-500">Loading bots...</p>
+                                <p className="text-gray-500">{t('loading')}</p>
                             </div>
                         </div>
                     ) : bots.length === 0 ? (
                         <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
                             <BotIcon className="h-12 w-12 text-gray-400 mx-auto mb-4"/>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">No bots configured</h3>
-                            <p className="text-gray-500 mb-6">Get started by adding your first bot</p>
-                            <Button variant="primary" onClick={() => this.setState({showCreateModal: true})}>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                {t('noBots')}
+                            </h3>
+                            <p className="text-gray-500 mb-6">{t('noBotsDescription')}</p>
+                            <Button
+                                variant="primary"
+                                onClick={() => this.setState({showCreateModal: true})}
+                            >
                                 <Plus className="h-4 w-4 mr-2"/>
-                                Add Your First Bot
+                                {t('addFirstBot')}
                             </Button>
                         </div>
                     ) : (
@@ -151,8 +189,15 @@ export default class Home extends React.Component<{}, AppState> {
                                     key={bot.id}
                                     bot={bot}
                                     onUpdate={this.fetchBots}
-                                    onEdit={(bot) => this.setState({editingBot: bot, showEditModal: true})}
-                                    onDelete={(bot) => this.setState({deletingBot: bot, showDeleteConfirm: true})}
+                                    onEdit={(bot) =>
+                                        this.setState({editingBot: bot, showEditModal: true})
+                                    }
+                                    onDelete={(bot) =>
+                                        this.setState({
+                                            deletingBot: bot,
+                                            showDeleteConfirm: true,
+                                        })
+                                    }
                                 />
                             ))}
                         </div>
@@ -162,7 +207,7 @@ export default class Home extends React.Component<{}, AppState> {
                     <Modal
                         isOpen={showCreateModal}
                         onClose={() => this.setState({showCreateModal: false})}
-                        title="Create New Bot"
+                        title={t('form.createTitle')}
                     >
                         <BotForm
                             onSubmit={this.handleCreateBot}
@@ -173,14 +218,18 @@ export default class Home extends React.Component<{}, AppState> {
                     {/* Edit Modal */}
                     <Modal
                         isOpen={showEditModal}
-                        onClose={() => this.setState({showEditModal: false, editingBot: null})}
-                        title="Edit Bot"
+                        onClose={() =>
+                            this.setState({showEditModal: false, editingBot: null})
+                        }
+                        title={t('form.editTitle')}
                     >
                         {editingBot && (
                             <BotForm
                                 initialData={editingBot}
                                 onSubmit={this.handleUpdateBot}
-                                onCancel={() => this.setState({showEditModal: false, editingBot: null})}
+                                onCancel={() =>
+                                    this.setState({showEditModal: false, editingBot: null})
+                                }
                             />
                         )}
                     </Modal>
@@ -188,23 +237,31 @@ export default class Home extends React.Component<{}, AppState> {
                     {/* Delete Confirmation Modal */}
                     <Modal
                         isOpen={showDeleteConfirm}
-                        onClose={() => this.setState({showDeleteConfirm: false, deletingBot: null})}
-                        title="Confirm Delete"
+                        onClose={() =>
+                            this.setState({showDeleteConfirm: false, deletingBot: null})
+                        }
+                        title={t('deleteConfirm.title')}
                     >
                         <div className="space-y-4">
                             <p className="text-gray-700">
-                                Are you sure you want to delete the bot "{deletingBot?.name}"? This action cannot be
-                                undone and will remove all associated conversations.
+                                {t('deleteConfirm.message', {
+                                    name: deletingBot?.name ?? '',
+                                })}
                             </p>
                             <div className="flex justify-end space-x-3">
                                 <Button
                                     variant="secondary"
-                                    onClick={() => this.setState({showDeleteConfirm: false, deletingBot: null})}
+                                    onClick={() =>
+                                        this.setState({
+                                            showDeleteConfirm: false,
+                                            deletingBot: null,
+                                        })
+                                    }
                                 >
-                                    Cancel
+                                    {t('deleteConfirm.cancel')}
                                 </Button>
                                 <Button variant="danger" onClick={this.handleDeleteBot}>
-                                    Delete Bot
+                                    {t('deleteConfirm.delete')}
                                 </Button>
                             </div>
                         </div>
@@ -213,4 +270,10 @@ export default class Home extends React.Component<{}, AppState> {
             </ProtectedRoute>
         );
     }
+}
+
+// REPLACE default export with wrapper that injects `t` for next-intl
+export default function DashboardPage() {
+    const t = useTranslations('bots');
+    return <DashboardInner t={t}/>;
 }
