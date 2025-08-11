@@ -1,4 +1,6 @@
 import React from 'react';
+import {useTranslations} from 'next-intl';
+
 import {Bot, BotStatus} from '@/types';
 import {Card, CardContent, CardHeader} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
@@ -16,11 +18,14 @@ import {
     Link,
 } from 'lucide-react';
 
-interface BotCardProps {
+type T = ReturnType<typeof useTranslations>;
+
+interface BotCardInnerProps {
     bot: Bot;
     onUpdate: () => void;
     onEdit: (bot: Bot) => void;
     onDelete: (bot: Bot) => void;
+    t: T;
 }
 
 interface BotCardState {
@@ -28,7 +33,8 @@ interface BotCardState {
     loading: boolean;
 }
 
-export class BotCard extends React.Component<BotCardProps, BotCardState> {
+// Non-exported inner class: accepts `t`
+class BotCardInner extends React.Component<BotCardInnerProps, BotCardState> {
     state: BotCardState = {
         status: null,
         loading: false,
@@ -86,7 +92,7 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
         }
     };
 
-    handleHealthCheck = async () => {
+    handleHealth = async () => {
         this.setState({loading: true});
         try {
             await apiClient.healthCheck(this.props.bot.id);
@@ -100,7 +106,7 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
     };
 
     render() {
-        const {bot, onEdit, onDelete} = this.props;
+        const {bot, onEdit, onDelete, t} = this.props;
         const {status, loading} = this.state;
 
         return (
@@ -118,11 +124,12 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                         </div>
                         <div className="flex items-center space-x-2">
                             {bot.is_active ? (
-                                <Badge variant="success">Active</Badge>
+                                <Badge variant="success">{t('common.active')}</Badge>
                             ) : (
-                                <Badge variant="default">Inactive</Badge>
+                                <Badge variant="default">{t('common.inactive')}</Badge>
                             )}
-                            {status?.is_running && <Badge variant="info">Running</Badge>}
+                            {status?.is_running && <Badge variant="info">{t('common.running')}</Badge>}
+                            {!status?.is_running && <Badge variant="default">{t('common.stopped')}</Badge>}
                         </div>
                     </div>
                 </CardHeader>
@@ -131,22 +138,22 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                         {/* Bot Info */}
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                                <span className="text-gray-500">Type:</span>
+                                <span className="text-gray-500">{t('bots.status.type')}</span>
                                 <span className="ml-2 font-medium capitalize">{bot.dify_type}</span>
                             </div>
                             <div>
-                                <span className="text-gray-500">Mode:</span>
+                                <span className="text-gray-500">{t('bots.status.mode')}</span>
                                 <span className="ml-2 font-medium capitalize">{bot.response_mode}</span>
                             </div>
                             <div>
-                                <span className="text-gray-500">Health:</span>
+                                <span className="text-gray-500">{t('bots.status.health')}</span>
                                 <span className="ml-2">
                   {bot.health_status === 'healthy' ? (
-                      <Badge variant="success">Healthy</Badge>
+                      <Badge variant="success">{t('common.healthy', {default: 'Healthy'})}</Badge>
                   ) : bot.health_status === 'unhealthy' ? (
-                      <Badge variant="danger">Unhealthy</Badge>
+                      <Badge variant="danger">{t('common.unhealthy', {default: 'Unhealthy'})}</Badge>
                   ) : (
-                      <Badge variant="default">Unknown</Badge>
+                      <Badge variant="default">{t('common.unknown', {default: 'Unknown'})}</Badge>
                   )}
                 </span>
                             </div>
@@ -155,7 +162,7 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                     className="text-gray-500"
                     title="Counts unique Telegram threads for this bot. Use /new or /clear to start a fresh thread or when a new user chats."
                 >
-                  Conversations (unique chats):
+                  {t('bots.status.conversations')}
                 </span>
                                 <span className="ml-2 font-medium">{status?.conversation_count || 0}</span>
                             </div>
@@ -166,13 +173,15 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                             <div className="flex items-center space-x-2">
                                 <Link className="h-4 w-4 text-gray-400"/>
                                 <span className="text-sm">
-                  Dify:
+                  {t('bots.status.difyConnection')}:
                   <span
                       className={`ml-1 font-medium ${
                           bot.health_status === 'healthy' ? 'text-green-600' : 'text-red-600'
                       }`}
                   >
-                    {bot.health_status === 'healthy' ? 'Connected' : 'Disconnected'}
+                    {bot.health_status === 'healthy'
+                        ? t('bots.status.connected')
+                        : t('bots.status.disconnected')}
                   </span>
                 </span>
                             </div>
@@ -185,7 +194,9 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                           bot.is_telegram_connected ? 'text-green-600' : 'text-gray-600'
                       }`}
                   >
-                    {bot.is_telegram_connected ? 'Connected' : 'Not configured'}
+                    {bot.is_telegram_connected
+                        ? t('bots.status.connected')
+                        : t('bots.status.notConfigured')}
                   </span>
                 </span>
                             </div>
@@ -205,7 +216,7 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                                                     disabled={loading}
                                                 >
                                                     <Pause className="h-4 w-4 mr-1"/>
-                                                    Stop
+                                                    {t('bots.actions.stop')}
                                                 </Button>
                                                 <Button
                                                     size="sm"
@@ -214,7 +225,7 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                                                     disabled={loading}
                                                 >
                                                     <RefreshCw className="h-4 w-4 mr-1"/>
-                                                    Restart
+                                                    {t('bots.actions.restart')}
                                                 </Button>
                                             </>
                                         ) : (
@@ -225,7 +236,7 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                                                 disabled={loading}
                                             >
                                                 <Play className="h-4 w-4 mr-1"/>
-                                                Start
+                                                {t('bots.actions.start')}
                                             </Button>
                                         )}
                                     </>
@@ -233,11 +244,11 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
                                 <Button
                                     size="sm"
                                     variant="secondary"
-                                    onClick={this.handleHealthCheck}
+                                    onClick={this.handleHealth}
                                     disabled={loading}
                                 >
                                     <Activity className="h-4 w-4 mr-1"/>
-                                    Check Health
+                                    {t('bots.actions.checkHealth')}
                                 </Button>
                             </div>
                             <div className="flex items-center space-x-2">
@@ -254,4 +265,12 @@ export class BotCard extends React.Component<BotCardProps, BotCardState> {
             </Card>
         );
     }
+}
+
+// Tiny wrapper: keeps the export name and provides `t`
+export function BotCard(
+    props: Omit<React.ComponentProps<typeof BotCardInner>, 't'>
+) {
+    const t = useTranslations(); // root; use t('common.*') and t('bots.*')
+    return <BotCardInner {...props} t={t}/>;
 }

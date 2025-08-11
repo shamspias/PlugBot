@@ -1,16 +1,20 @@
 'use client';
 
 import {useAuth} from '@/contexts/AuthContext';
+import {useTranslations, useLocale} from 'next-intl';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {LogOut, User, Settings} from 'lucide-react';
+import {LogOut, User} from 'lucide-react';
+import LanguageSwitcher from './LanguageSwitcher';
 
 export default function Navigation() {
     const {user, logout} = useAuth();
     const pathname = usePathname();
+    const t = useTranslations('nav');
+    const locale = useLocale();
 
     // Don't show navigation on auth pages
-    if (pathname.startsWith('/auth')) {
+    if (pathname.includes('/auth')) {
         return null;
     }
 
@@ -23,12 +27,17 @@ export default function Navigation() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between h-16">
                     <div className="flex items-center">
-                        <Link href="/dashboard" className="text-xl font-bold text-gray-900">
-                            PlugBot
+                        <Link
+                            href={`/${locale}/dashboard`}
+                            className="text-xl font-bold text-gray-900"
+                        >
+                            {t('title')}
                         </Link>
                     </div>
 
                     <div className="flex items-center space-x-4">
+                        <LanguageSwitcher/>
+
                         <div className="flex items-center space-x-2 text-sm text-gray-700">
                             <User className="w-4 h-4"/>
                             <span>{user.email}</span>
@@ -39,7 +48,7 @@ export default function Navigation() {
                             className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                             <LogOut className="w-4 h-4"/>
-                            <span>Logout</span>
+                            <span>{t('logout')}</span>
                         </button>
                     </div>
                 </div>

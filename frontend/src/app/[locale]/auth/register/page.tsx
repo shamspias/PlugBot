@@ -4,9 +4,12 @@ import React, {useState} from 'react';
 import {useAuth} from '@/contexts/AuthContext';
 import Link from 'next/link';
 import {Mail, Lock, User, Eye, EyeOff, UserPlus, AlertCircle, CheckCircle} from 'lucide-react';
+import {useTranslations} from 'next-intl';
 
 export default function RegisterPage() {
+    const t = useTranslations('auth.register');
     const {register} = useAuth();
+
     const [formData, setFormData] = useState({
         email: '',
         username: '',
@@ -16,7 +19,7 @@ export default function RegisterPage() {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [error, setError] = useState<string>('');
     const [passwordStrength, setPasswordStrength] = useState(0);
 
     const checkPasswordStrength = (password: string) => {
@@ -33,9 +36,7 @@ export default function RegisterPage() {
         const {name, value} = e.target;
         setFormData(prev => ({...prev, [name]: value}));
 
-        if (name === 'password') {
-            checkPasswordStrength(value);
-        }
+        if (name === 'password') checkPasswordStrength(value);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -43,12 +44,12 @@ export default function RegisterPage() {
         setError('');
 
         if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match');
+            setError(t('errors.passwordMismatch'));
             return;
         }
 
         if (passwordStrength < 5) {
-            setError('Password does not meet all requirements');
+            setError(t('errors.weakPassword'));
             return;
         }
 
@@ -62,7 +63,7 @@ export default function RegisterPage() {
                 full_name: formData.full_name || undefined
             });
         } catch (err: any) {
-            setError(err.message || 'Registration failed');
+            setError(err?.message || t('errors.registrationFailed'));
         } finally {
             setLoading(false);
         }
@@ -74,6 +75,15 @@ export default function RegisterPage() {
         if (passwordStrength <= 4) return 'bg-blue-500';
         return 'bg-green-500';
     };
+
+    const strengthLabel =
+        passwordStrength <= 2
+            ? t('passwordStrength.weak')
+            : passwordStrength <= 3
+                ? t('passwordStrength.fair')
+                : passwordStrength <= 4
+                    ? t('passwordStrength.good')
+                    : t('passwordStrength.strong');
 
     return (
         <div
@@ -90,45 +100,51 @@ export default function RegisterPage() {
                             <UserPlus className="w-8 h-8 text-white"/>
                         </div>
                         <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                            Create Account
+                            {t('title')}
                         </h1>
-                        <p className="text-gray-600 mt-2">Join PlugBot to manage your bots</p>
+                        <p className="text-gray-600 mt-2">{t('subtitle')}</p>
                     </div>
 
                     {/* Error Alert */}
                     {error && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                        <div
+                            role="alert"
+                            className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3"
+                        >
                             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"/>
                             <p className="text-sm text-red-700">{error}</p>
                         </div>
                     )}
 
                     {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Full Name (Optional)
+                            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
+                                {t('fullNameOptional')}
                             </label>
                             <div className="relative">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"/>
                                 <input
+                                    id="full_name"
                                     type="text"
                                     name="full_name"
                                     value={formData.full_name}
                                     onChange={handleChange}
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                                    placeholder="John Doe"
+                                    placeholder={t('placeholders.fullName')}
+                                    autoComplete="name"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Username
+                            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                                {t('username')}
                             </label>
                             <div className="relative">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"/>
                                 <input
+                                    id="username"
                                     type="text"
                                     name="username"
                                     value={formData.username}
@@ -136,48 +152,56 @@ export default function RegisterPage() {
                                     required
                                     pattern="^[a-zA-Z0-9_-]+$"
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                                    placeholder="johndoe"
+                                    placeholder={t('placeholders.username')}
+                                    autoComplete="username"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Email Address
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                                {t('email')}
                             </label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"/>
                                 <input
+                                    id="email"
                                     type="email"
                                     name="email"
                                     value={formData.email}
                                     onChange={handleChange}
                                     required
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                                    placeholder="you@example.com"
+                                    placeholder={t('placeholders.email')}
+                                    autoComplete="email"
+                                    inputMode="email"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Password
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                                {t('password')}
                             </label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"/>
                                 <input
+                                    id="password"
                                     type={showPassword ? 'text' : 'password'}
                                     name="password"
                                     value={formData.password}
                                     onChange={handleChange}
                                     required
                                     className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                                    placeholder="••••••••"
+                                    placeholder={t('placeholders.password')}
+                                    autoComplete="new-password"
+                                    aria-describedby="password-strength password-requirements"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    aria-label={showPassword ? t('hidePassword') : t('showPassword')}
                                 >
                                     {showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}
                                 </button>
@@ -186,21 +210,24 @@ export default function RegisterPage() {
                             {/* Password Strength Indicator */}
                             {formData.password && (
                                 <div className="mt-2">
-                                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden" aria-hidden="true">
                                         <div
                                             className={`h-full transition-all ${getPasswordStrengthColor()}`}
                                             style={{width: `${(passwordStrength / 5) * 100}%`}}
                                         />
                                     </div>
-                                    <div className="mt-2 space-y-1">
+                                    <span id="password-strength" className="mt-1 block text-xs text-gray-600">
+                    {strengthLabel}
+                  </span>
+                                    <div id="password-requirements" className="mt-2 space-y-1">
                                         {[
-                                            {check: formData.password.length >= 8, text: 'At least 8 characters'},
-                                            {check: /[A-Z]/.test(formData.password), text: 'One uppercase letter'},
-                                            {check: /[a-z]/.test(formData.password), text: 'One lowercase letter'},
-                                            {check: /\d/.test(formData.password), text: 'One number'},
+                                            {check: formData.password.length >= 8, text: t('requirements.minChars')},
+                                            {check: /[A-Z]/.test(formData.password), text: t('requirements.uppercase')},
+                                            {check: /[a-z]/.test(formData.password), text: t('requirements.lowercase')},
+                                            {check: /\d/.test(formData.password), text: t('requirements.number')},
                                             {
                                                 check: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password),
-                                                text: 'One special character'
+                                                text: t('requirements.special')
                                             }
                                         ].map((req, idx) => (
                                             <div key={idx} className="flex items-center gap-2 text-xs">
@@ -216,19 +243,21 @@ export default function RegisterPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Confirm Password
+                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                                {t('confirmPassword')}
                             </label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"/>
                                 <input
+                                    id="confirmPassword"
                                     type={showPassword ? 'text' : 'password'}
                                     name="confirmPassword"
                                     value={formData.confirmPassword}
                                     onChange={handleChange}
                                     required
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                                    placeholder="••••••••"
+                                    placeholder={t('placeholders.confirmPassword')}
+                                    autoComplete="new-password"
                                 />
                             </div>
                         </div>
@@ -240,26 +269,34 @@ export default function RegisterPage() {
                         >
                             {loading ? (
                                 <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg"
-                       fill="none" viewBox="0 0 24 24">
+                  <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                  >
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                             strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
-                  Creating account...
+                                    {t('creatingAccount')}
                 </span>
                             ) : (
-                                'Create Account'
+                                t('createAccount')
                             )}
                         </button>
                     </form>
 
                     {/* Login Link */}
                     <p className="mt-6 text-center text-gray-600">
-                        Already have an account?{' '}
+                        {t('alreadyHaveAccount')}{' '}
                         <Link href="/auth/login" className="text-purple-600 hover:text-purple-700 font-medium">
-                            Sign in
+                            {t('signIn')}
                         </Link>
                     </p>
                 </div>

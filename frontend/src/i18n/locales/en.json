@@ -1,0 +1,247 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "refresh": "Refresh",
+    "back": "Back",
+    "confirm": "Confirm",
+    "actions": "Actions",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "unknown": "Unknown",
+    "healthy": "Healthy",
+    "unhealthy": "Unhealthy",
+    "running": "Running",
+    "stopped": "Stopped",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "nav": {
+    "title": "PlugBot",
+    "logout": "Logout",
+    "dashboard": "Dashboard",
+    "settings": "Settings"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Sign in to access PlugBot Dashboard",
+      "email": "Email Address",
+      "password": "Password",
+      "rememberMe": "Remember me",
+      "forgotPassword": "Forgot password?",
+      "signIn": "Sign In",
+      "signingIn": "Signing in...",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up",
+      "invalidCredentials": "Invalid email or password",
+      "emailPlaceholder": "you@example.com",
+      "passwordPlaceholder": "••••••••",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+    "register": {
+      "title": "Create Account",
+      "subtitle": "Join PlugBot to manage your bots",
+      "fullName": "Full Name",
+      "fullNameOptional": "Full Name (Optional)",
+      "username": "Username",
+      "email": "Email Address",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "createAccount": "Create Account",
+      "creatingAccount": "Creating account...",
+      "alreadyHaveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "passwordRequirements": {
+        "title": "Password Requirements",
+        "length": "At least 8 characters",
+        "uppercase": "One uppercase letter",
+        "lowercase": "One lowercase letter",
+        "number": "One number",
+        "special": "One special character"
+      },
+      "passwordStrength": {
+        "weak": "Weak",
+        "fair": "Fair",
+        "good": "Good",
+        "strong": "Strong"
+      },
+      "errors": {
+        "passwordMismatch": "Passwords do not match",
+        "weakPassword": "Password does not meet all requirements",
+        "emailTaken": "Email already registered",
+        "usernameTaken": "Username already taken"
+      },
+      "showPassword": "Show password",
+      "placeholders": {
+        "fullName": "John Doe",
+        "username": "your_username",
+        "email": "you@example.com",
+        "password": "••••••••",
+        "confirmPassword": "••••••••"
+      }
+    },
+    "forgotPassword": {
+      "title": "Forgot Password?",
+      "subtitle": "Enter your email to receive a reset link",
+      "email": "Email Address",
+      "sendResetLink": "Send Reset Link",
+      "sending": "Sending...",
+      "backToLogin": "Back to Login",
+      "errors": {
+        "generic": "Failed to send reset email"
+      },
+      "checkEmail": {
+        "title": "Check Your Email",
+        "message": "We've sent a password reset link to",
+        "backToLogin": "Back to Login"
+      }
+    },
+    "resetPassword": {
+      "title": "Reset Your Password",
+      "subtitle": "Enter your new password below",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "resetPassword": "Reset Password",
+      "resetting": "Resetting Password...",
+      "success": {
+        "title": "Password Reset Successful!",
+        "message": "Your password has been successfully reset. You will be redirected to the login page in a few seconds.",
+        "redirecting": "Redirecting to login..."
+      },
+      "errors": {
+        "invalidToken": "This password reset link is invalid or has expired. Please request a new password reset link.",
+        "requestNew": "Request New Reset Link"
+      }
+    }
+  },
+  "bots": {
+    "title": "Bot Management",
+    "subtitle": "Connect your Dify applications with Telegram",
+    "header": {
+      "title": "Bot Management",
+      "description": "Connect your Dify applications with Telegram"
+    },
+    "addBot": "Add Bot",
+    "addFirstBot": "Add Your First Bot",
+    "noBots": "No bots configured",
+    "noBotsDescription": "Get started by adding your first bot",
+    "loadingBots": "Loading bots...",
+    "loading": "Loading bots...",
+    "refreshing": "Refreshing...",
+    "actions": {
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "checkHealth": "Check Health",
+      "delete": "Delete Bot",
+      "edit": "Edit Bot",
+      "refresh": "Refresh",
+      "add": "Add Bot"
+    },
+    "status": {
+      "type": "Type",
+      "mode": "Mode",
+      "health": "Health",
+      "conversations": "Conversations (unique chats)",
+      "difyConnection": "Dify",
+      "telegramConnection": "Telegram",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "notConfigured": "Not configured"
+    },
+    "form": {
+      "createTitle": "Create New Bot",
+      "editTitle": "Edit Bot",
+      "sections": {
+        "basic": "Basic Information",
+        "dify": "Dify Configuration",
+        "telegram": "Telegram Configuration",
+        "auth": "Authentication Settings",
+        "advanced": "Advanced Settings"
+      },
+      "fields": {
+        "name": "Bot Name",
+        "namePlaceholder": "My Dify Bot",
+        "description": "Description",
+        "descriptionPlaceholder": "A helpful AI assistant powered by Dify",
+        "difyEndpoint": "Dify Endpoint",
+        "difyEndpointPlaceholder": "https://dify.ai/v1",
+        "difyApiKey": "Dify API Key",
+        "difyApiKeyPlaceholder": "app-xxxxxxxxxxxxx",
+        "difyType": "Dify Type",
+        "responseMode": "Response Mode",
+        "telegramToken": "Telegram Bot Token (Optional)",
+        "telegramTokenPlaceholder": "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz",
+        "telegramTokenHelp": "Get your bot token from @BotFather on Telegram",
+        "autoGenerateTitle": "Auto-generate conversation titles",
+        "enableFileUpload": "Enable file uploads",
+        "enableMarkdown": "Use Markdown formatting in Telegram",
+        "telegramMarkdown": "Use Markdown formatting in Telegram",
+        "authRequired": "Require email authentication",
+        "allowedDomains": "Allowed Email Domains",
+        "allowedDomainsPlaceholder": "yandex.ru, google.com",
+        "allowedDomainsHelp": "Enter comma-separated domain names. Only users with email addresses from these domains can authenticate."
+      },
+      "options": {
+        "difyType": {
+          "application": "Application",
+          "workflow": "Workflow",
+          "agent": "Agent",
+          "chatflow": "Chatflow",
+          "chat": "Chat"
+        },
+        "responseMode": {
+          "streaming": "Streaming (token-by-token)",
+          "blocking": "Blocking (wait for full response)"
+        }
+      },
+      "authHelp": "When authentication is enabled, users must verify their email address before they can use the bot. Only users with email addresses from the specified domains will be allowed to authenticate. Users will receive a verification code via email and must enter it in Telegram to gain access.",
+      "buttons": {
+        "create": "Create Bot",
+        "update": "Update Bot",
+        "cancel": "Cancel"
+      },
+      "actions": {
+        "toggleAuthHelp": "Show authentication help"
+      }
+    },
+    "deleteConfirm": {
+      "title": "Confirm Delete",
+      "message": "Are you sure you want to delete the bot \"{name}\"? This action cannot be undone and will remove all associated conversations.",
+      "cancel": "Cancel",
+      "delete": "Delete Bot"
+    },
+    "errors": {
+      "fetchFailed": "Failed to fetch bots",
+      "createFailed": "Failed to create bot",
+      "updateFailed": "Failed to update bot",
+      "deleteFailed": "Failed to delete bot",
+      "startFailed": "Failed to start bot",
+      "stopFailed": "Failed to stop bot",
+      "restartFailed": "Failed to restart bot",
+      "healthCheckFailed": "Failed to check health",
+      "invalidEndpoint": "Invalid Dify endpoint",
+      "invalidApiKey": "Invalid API key",
+      "nameExists": "Bot with this name already exists"
+    }
+  },
+  "errors": {
+    "general": "An error occurred",
+    "network": "Network error",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "notFound": "Not found",
+    "serverError": "Server error",
+    "tryAgain": "Please try again"
+  }
+}
