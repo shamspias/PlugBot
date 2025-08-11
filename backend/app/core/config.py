@@ -67,7 +67,7 @@ class Settings(BaseSettings):
         supported_languages = ['en', 'ru']
         if v.lower() not in supported_languages:
             # Fallback to English if unsupported language
-            return 'en'
+            return 'ru'
         return v.lower()
 
     class Config:
