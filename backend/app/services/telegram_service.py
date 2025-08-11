@@ -21,6 +21,7 @@ from telegram.ext import (
 
 from ..core.config import settings
 from ..core.security import security_manager
+from ..core.i18n import t  # Import translation function
 from ..models.bot import Bot
 from ..models.conversation import Conversation, Message
 from ..models.auth import AuthCode
@@ -28,7 +29,7 @@ from ..services.dify_service import DifyService
 from ..utils.logger import get_logger
 
 try:
-    from ..utils.mailer import send_email  # send_email(to_email, subject, body)
+    from ..utils.mailer import send_email
 except Exception:  # pragma: no cover
     def send_email(to_email: str, subject: str, body: str):
         raise RuntimeError(
@@ -50,10 +51,29 @@ class TelegramService:
         self.running = False
         # Redis for lightweight session of "who is authenticated"
         self.redis = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+        # Store user language preferences
+        self.user_languages = {}  # Will be stored in Redis in production
 
     @property
     def bot(self) -> Bot:
         return self._bot
+
+    # ---------- LANGUAGE HELPERS ----------
+
+    def _get_user_language(self, user_id: str) -> str:
+        """Get user's preferred language or default."""
+        # Check Redis for user preference
+        lang_key = f"lang:{self.bot.id}:{user_id}"
+        user_lang = self.redis.get(lang_key)
+        if user_lang:
+            return user_lang
+        # Return default language from settings
+        return settings.DEFAULT_LANGUAGE
+
+    def _set_user_language(self, user_id: str, lang: str):
+        """Set user's preferred language."""
+        lang_key = f"lang:{self.bot.id}:{user_id}"
+        self.redis.set(lang_key, lang)
 
     # ---------- AUTH HELPERS ----------
 
@@ -68,7 +88,6 @@ class TelegramService:
 
     def _set_authenticated(self, telegram_user_id: str, email: str):
         self.redis.set(self._auth_key(telegram_user_id), json.dumps({"email": email}))
-        # Persist until /logout (no TTL)
 
     def _clear_authenticated(self, telegram_user_id: str):
         self.redis.delete(self._auth_key(telegram_user_id))
@@ -104,11 +123,9 @@ class TelegramService:
     def _escape_markdown_v2_minimal(self, text: str) -> str:
         """
         Minimal escape for Telegram MarkdownV2 that PRESERVES * and _ so **bold** and _italic_ work.
-        We escape characters that commonly break parsing when they appear as raw text.
         """
         if not text:
             return text
-        # NOTE: we intentionally do NOT escape '*' or '_' to allow bold/italic.
         specials_to_escape = r"[]()~`>#+-=|{}.!\\"
         out = []
         for ch in text:
@@ -120,10 +137,7 @@ class TelegramService:
 
     def _fmt(self, text: str, *, finalize: bool = False) -> dict:
         """
-        Formatting helper:
-        - When Markdown toggle is off: always plain text.
-        - While streaming (finalize=False): plain text (no parse_mode) to avoid partial-entity errors.
-        - On final send/edit (finalize=True): enable MarkdownV2 with minimal escaping that keeps ** and _ working.
+        Formatting helper for markdown support.
         """
         use_md = bool(getattr(self.bot, "telegram_markdown_enabled", False))
         safe_text = text if (text is not None and text != "") else "…"
@@ -137,7 +151,6 @@ class TelegramService:
                 "parse_mode": ParseMode.MARKDOWN_V2,
             }
 
-        # streaming: no parse mode
         return {"text": safe_text}
 
     # ---------- LIFECYCLE ----------
@@ -154,6 +167,8 @@ class TelegramService:
             self.application.add_handler(CommandHandler("clear", self.handle_clear))
             self.application.add_handler(CommandHandler("history", self.handle_history))
             self.application.add_handler(CommandHandler("logout", self.handle_logout))
+            self.application.add_handler(CommandHandler("language", self.handle_language))
+            self.application.add_handler(CommandHandler("lang", self.handle_language))
 
             # Messages
             self.application.add_handler(
@@ -168,12 +183,13 @@ class TelegramService:
             await self.application.initialize()
             await self.application.bot.set_my_commands(
                 [
-                    ("start", "Start the bot"),
-                    ("help", "Show help message"),
-                    ("new", "Start a new conversation"),
-                    ("clear", "Clear current conversation"),
-                    ("history", "Show conversation history"),
-                    ("logout", "Log out of this bot"),
+                    ("start", "Start the bot / Запустить бота"),
+                    ("help", "Show help message / Показать справку"),
+                    ("new", "Start a new conversation / Начать новый разговор"),
+                    ("clear", "Clear current conversation / Очистить текущий разговор"),
+                    ("history", "Show conversation history / История разговоров"),
+                    ("language", "Change language / Изменить язык"),
+                    ("logout", "Log out / Выйти"),
                 ]
             )
 
@@ -186,7 +202,6 @@ class TelegramService:
     async def start_polling(self):
         """Start polling for updates."""
         try:
-            # If a webhook was set previously, clear it so polling works
             try:
                 info = await self.application.bot.get_webhook_info()
                 if info and info.url:
@@ -215,34 +230,51 @@ class TelegramService:
 
     async def handle_start(self, update: Update, context):
         """Handle /start command."""
-        welcome_message = (
-            f"🤖 Welcome to {self.bot.name}!\n\n"
-            f"{self.bot.description or 'I am your AI assistant powered by Dify.'}\n\n"
-            "Commands:\n"
-            "/help - Show this help message\n"
-            "/new - Start a new conversation\n"
-            "/clear - Clear current conversation\n"
-            "/history - Show recent conversations\n"
-            "/logout - Log out and re-authenticate\n\n"
-            "Just send me a message to start chatting!"
-        )
-        # Use classic Markdown here (simple, short text)
+        user_id = str(update.effective_user.id)
+        lang = self._get_user_language(user_id)
+
+        if self.bot.description:
+            welcome_message = t("bot.welcome", lang=lang,
+                                bot_name=self.bot.name,
+                                description=self.bot.description)
+        else:
+            welcome_message = t("bot.welcome_no_desc", lang=lang,
+                                bot_name=self.bot.name)
+
         await update.message.reply_text(welcome_message, parse_mode=ParseMode.MARKDOWN)
 
     async def handle_help(self, update: Update, context):
         """Handle /help command."""
         await self.handle_start(update, context)
 
-    async def handle_logout(self, update: Update, context):
-        """Handle /logout command: revoke auth and require OTP again."""
+    async def handle_language(self, update: Update, context):
+        """Handle /language command to change user's language preference."""
+        keyboard = [
+            [
+                InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"),
+                InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
         user_id = str(update.effective_user.id)
+        current_lang = self._get_user_language(user_id)
+
+        # Send message in current language
+        msg_text = "Choose your language / Выберите язык:"
+        await update.message.reply_text(msg_text, reply_markup=reply_markup)
+
+    async def handle_logout(self, update: Update, context):
+        """Handle /logout command."""
+        user_id = str(update.effective_user.id)
+        lang = self._get_user_language(user_id)
         self._clear_authenticated(user_id)
-        await update.message.reply_text(
-            "✅ You have been logged out. Send your email to authenticate again."
-        )
+        await update.message.reply_text(t("bot.logout_success", lang=lang))
 
     async def handle_new_conversation(self, update: Update, context):
         """Handle /new command to start new conversation."""
+        user_id = str(update.effective_user.id)
+        lang = self._get_user_language(user_id)
         chat_id = str(update.effective_chat.id)
 
         existing = (
@@ -258,10 +290,12 @@ class TelegramService:
             existing.is_active = False
             self.db.commit()
 
-        await update.message.reply_text("✨ Started a new conversation. Send me your message!")
+        await update.message.reply_text(t("bot.new_conversation", lang=lang))
 
     async def handle_history(self, update: Update, context):
         """Handle /history command."""
+        user_id = str(update.effective_user.id)
+        lang = self._get_user_language(user_id)
         chat_id = str(update.effective_chat.id)
 
         conversations = (
@@ -273,23 +307,27 @@ class TelegramService:
         )
 
         if not conversations:
-            await update.message.reply_text("No conversation history found.")
+            await update.message.reply_text(t("bot.no_history", lang=lang))
             return
 
         keyboard = []
         for conv in conversations:
-            status = "🟢" if conv.is_active else "⚪"
-            title = conv.title or f"Conversation {conv.created_at.strftime('%Y-%m-%d %H:%M')}"
+            status = t("conversation.status_active", lang=lang) if conv.is_active else t("conversation.status_inactive",
+                                                                                         lang=lang)
+            title = conv.title or f"{t('bot.untitled_conversation', lang=lang)} {conv.created_at.strftime('%Y-%m-%d %H:%M')}"
             keyboard.append(
                 [InlineKeyboardButton(f"{status} {title}", callback_data=f"conv_{conv.id}")]
             )
 
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text("📚 Recent Conversations:", reply_markup=reply_markup)
+        await update.message.reply_text(t("bot.recent_conversations", lang=lang), reply_markup=reply_markup)
 
     async def handle_clear(self, update: Update, context):
-        """Handle /clear: delete current active conversation and its messages."""
+        """Handle /clear command."""
+        user_id = str(update.effective_user.id)
+        lang = self._get_user_language(user_id)
         chat_id = str(update.effective_chat.id)
+
         conv = (
             self.db.query(Conversation)
             .filter(
@@ -300,13 +338,13 @@ class TelegramService:
             .first()
         )
         if not conv:
-            await update.message.reply_text("Nothing to clear. You’re already fresh ✨")
+            await update.message.reply_text(t("bot.nothing_to_clear", lang=lang))
             return
-        # delete messages then conversation
+
         self.db.query(Message).filter(Message.conversation_id == conv.id).delete()
         self.db.delete(conv)
         self.db.commit()
-        await update.message.reply_text("🧹 Cleared. Your next message will start a new conversation.")
+        await update.message.reply_text(t("bot.conversation_cleared", lang=lang))
 
     # ---------- CALLBACKS ----------
 
@@ -315,14 +353,25 @@ class TelegramService:
         query = update.callback_query
         await query.answer()
 
-        if query.data.startswith("conv_"):
+        user_id = str(update.effective_user.id)
+        lang = self._get_user_language(user_id)
+
+        if query.data.startswith("lang_"):
+            # Language selection
+            new_lang = query.data[5:]  # Extract language code
+            self._set_user_language(user_id, new_lang)
+
+            # Confirm in the new language
+            confirmation = "✅ Language changed to English" if new_lang == "en" else "✅ Язык изменен на русский"
+            await query.edit_message_text(confirmation)
+
+        elif query.data.startswith("conv_"):
             conv_id = query.data[5:]
             conversation = (
                 self.db.query(Conversation).filter(Conversation.id == conv_id).first()
             )
 
             if conversation:
-                # Deactivate others for this chat + bot, activate chosen
                 self.db.query(Conversation).filter(
                     Conversation.telegram_chat_id == conversation.telegram_chat_id,
                     Conversation.bot_id == self.bot.id,
@@ -331,8 +380,9 @@ class TelegramService:
                 conversation.is_active = True
                 self.db.commit()
 
+                title = conversation.title or t("bot.untitled_conversation", lang=lang)
                 await query.edit_message_text(
-                    f"✅ Switched to conversation: {conversation.title or 'Untitled'}"
+                    t("bot.switched_conversation", lang=lang, title=title)
                 )
 
     # ---------- MESSAGES (AUTH-GATED) ----------
@@ -340,12 +390,12 @@ class TelegramService:
     async def _auth_gate(self, update: Update, context) -> bool:
         """
         Returns True if the user is allowed to proceed to Dify.
-        Otherwise, this method replies (prompts/validates) and returns False to stop handling.
         """
         if not self.bot.auth_required:
             return True
 
         user_id = str(update.effective_user.id)
+        lang = self._get_user_language(user_id)
         text = (update.message.text or "").strip()
 
         # Already authenticated?
@@ -355,7 +405,6 @@ class TelegramService:
         # 6-digit code?
         if re.fullmatch(r"\d{6}", text):
             now = datetime.now(timezone.utc)
-            # Only accept codes for this bot, not used, not expired
             pending_email = self.redis.get(self._pending_key(user_id))
             q = (
                 self.db.query(AuthCode)
@@ -377,56 +426,54 @@ class TelegramService:
                 self.db.commit()
                 self._set_authenticated(user_id, code_row.email)
                 self.redis.delete(self._pending_key(user_id))
-                await update.message.reply_text("✅ Authentication successful! You can now chat.")
+                await update.message.reply_text(t("auth.success", lang=lang))
                 return False
             else:
-                await update.message.reply_text(
-                    "❌ Invalid or expired code. Please send your email again."
-                )
+                await update.message.reply_text(t("auth.invalid_code", lang=lang))
                 return False
 
-        # Looks like email? Validate and send code.
+        # Looks like email?
         if self._looks_like_email(text):
             email = text
             if not self._email_ok_for_bot(email):
                 domains = ", ".join(self._allowed_domains()) or "(none configured)"
                 await update.message.reply_text(
-                    f"🚫 Email not allowed. Allowed domains: {domains}"
+                    t("auth.email_not_allowed", lang=lang, domains=domains)
                 )
                 return False
 
-            # Generate and store 6-digit code, 5 minutes expiry
+            # Generate and store 6-digit code
             code = f"{secrets.randbelow(1_000_000):06d}"
             expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
             ac = AuthCode(bot_id=self.bot.id, email=email, code=code, expires_at=expires_at)
             self.db.add(ac)
             self.db.commit()
 
-            # Remember pending email per user for strict matching
             self.redis.setex(self._pending_key(user_id), 300, email)
 
             try:
                 send_email(
                     to_email=email,
-                    subject=f"Your {self.bot.name} verification code",
-                    body=f"Your verification code is: {code}\nIt expires in 5 minutes.",
+                    subject=t("auth.email_subject", lang=lang, bot_name=self.bot.name),
+                    body=t("auth.email_body", lang=lang, code=code),
                 )
             except Exception as e:
                 logger.error("Failed to send code to %s: %s", email, e)
-                await update.message.reply_text(
-                    "❌ Could not send email. Please try again later."
-                )
+                await update.message.reply_text(t("auth.email_failed", lang=lang))
                 return False
 
-            await update.message.reply_text(
-                "📧 I’ve emailed you a 6-digit code. Reply here with the code to continue (expires in 5 minutes)."
-            )
+            await update.message.reply_text(t("auth.code_sent", lang=lang))
             return False
 
         # Not a code and not an email → prompt
         domains = self._allowed_domains()
-        hint = f" (allowed domains: {', '.join(domains)})" if domains else ""
-        await update.message.reply_text(f"🔐 Please send your email to authenticate{hint}.")
+        domains_hint = ""
+        if domains:
+            domains_hint = t("auth.domains_hint", lang=lang, domains=", ".join(domains))
+
+        await update.message.reply_text(
+            t("auth.required", lang=lang, domains_hint=domains_hint)
+        )
         return False
 
     async def handle_message(self, update: Update, context):
@@ -434,13 +481,15 @@ class TelegramService:
         if not update.message or not update.message.text:
             return
 
+        user_id = str(update.effective_user.id)
+        lang = self._get_user_language(user_id)
+
         # AUTH GATE
         can_proceed = await self._auth_gate(update, context)
         if not can_proceed:
             return
 
         chat_id = str(update.effective_chat.id)
-        user_id = str(update.effective_user.id)
         username = update.effective_user.username
         message_text = update.message.text
 
@@ -491,7 +540,6 @@ class TelegramService:
                 if event.get("event") == "message":
                     response_text += event.get("answer", "")
 
-                    # Real-time updates (streaming)
                     if self.bot.response_mode == "streaming":
                         if not message_id:
                             msg = await update.message.reply_text(**self._fmt(response_text, finalize=False))
@@ -510,7 +558,6 @@ class TelegramService:
                                     raise
 
                 elif event.get("event") == "message_end":
-                    # First response: capture conversation_id
                     if not conversation.dify_conversation_id:
                         conversation.dify_conversation_id = event.get("conversation_id")
 
@@ -527,8 +574,9 @@ class TelegramService:
                     self.db.commit()
 
                 elif event.get("event") == "error":
+                    error_msg = event.get('message', t('errors.generic_error', lang=lang))
                     await update.message.reply_text(
-                        f"❌ {event.get('message', 'An error occurred')}"
+                        t("errors.dify_error", lang=lang, message=error_msg)
                     )
                     return
 
@@ -548,26 +596,34 @@ class TelegramService:
                             if "Message is not modified" not in str(e):
                                 raise
             else:
-                await update.message.reply_text("I couldn't generate a response. Please try again.")
+                await update.message.reply_text(t("bot.no_response", lang=lang))
 
         except Exception as e:
             logger.error("Error handling message: %s", e)
-            await update.message.reply_text("❌ An error occurred. Please try again.")
+            await update.message.reply_text(t("bot.error_occurred", lang=lang))
 
     async def handle_document(self, update: Update, context):
         """Handle document uploads (auth-gated)."""
-        # Gate uploads too
-        if self.bot.auth_required and not self._is_authenticated(str(update.effective_user.id)):
-            await update.message.reply_text("🔐 Please authenticate first: send your email.")
+        user_id = str(update.effective_user.id)
+        lang = self._get_user_language(user_id)
+
+        if self.bot.auth_required and not self._is_authenticated(user_id):
+            domains = self._allowed_domains()
+            domains_hint = ""
+            if domains:
+                domains_hint = t("auth.domains_hint", lang=lang, domains=", ".join(domains))
+            await update.message.reply_text(
+                t("auth.required", lang=lang, domains_hint=domains_hint)
+            )
             return
 
         if not self.bot.enable_file_upload:
-            await update.message.reply_text("File uploads are disabled for this bot.")
+            await update.message.reply_text(t("bot.file_upload_disabled", lang=lang))
             return
 
         document = update.message.document
         if document.file_size > 15 * 1024 * 1024:  # 15MB limit
-            await update.message.reply_text("File size exceeds 15MB limit.")
+            await update.message.reply_text(t("bot.file_size_exceeded", lang=lang))
             return
 
         # Download file
@@ -575,7 +631,6 @@ class TelegramService:
         file_data = await file.download_as_bytearray()
 
         chat_id = str(update.effective_chat.id)
-        user_id = str(update.effective_user.id)
         username = update.effective_user.username
         caption = (update.message.caption or "").strip()
 
@@ -606,11 +661,11 @@ class TelegramService:
             file_data=bytes(file_data), filename=document.file_name, user_id=f"telegram_{user_id}"
         )
         if not result:
-            await update.message.reply_text("❌ Failed to upload file.")
+            await update.message.reply_text(t("bot.file_upload_failed", lang=lang))
             return
 
         # Save a user-side message
-        user_text = caption if caption else f"[uploaded file: {document.file_name}]"
+        user_text = caption if caption else t("bot.uploaded_file", lang=lang, filename=document.file_name)
         user_message = Message(
             conversation_id=conversation.id,
             role="user",
@@ -625,9 +680,10 @@ class TelegramService:
             {"type": "document", "transfer_method": "local_file", "upload_file_id": result.get("id")}
         ]
 
-        query_text = caption or "Please analyze the attached file."
+        query_text = caption or t("bot.analyze_file", lang=lang)
         await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
+        # Process response (similar to handle_message)
         response_text = ""
         message_id = None
         last_sent_text = None
@@ -673,8 +729,9 @@ class TelegramService:
                     self.db.commit()
 
                 elif event.get("event") == "error":
+                    error_msg = event.get('message', t('errors.generic_error', lang=lang))
                     await update.message.reply_text(
-                        f"❌ {event.get('message', 'An error occurred')}"
+                        t("errors.dify_error", lang=lang, message=error_msg)
                     )
                     return
 
@@ -691,25 +748,29 @@ class TelegramService:
                             if "Message is not modified" not in str(e):
                                 raise
             else:
-                await update.message.reply_text("I couldn't generate a response. Please try again.")
-        except BadRequest as e:
-            if "Message is not modified" in str(e):
-                logger.debug("Document stream noop edit ignored")
-            else:
-                logger.error("Error handling document message: %s", e)
-                await update.message.reply_text("❌ An error occurred. Please try again.")
+                await update.message.reply_text(t("bot.no_response", lang=lang))
+
         except Exception as e:
             logger.error("Error handling document message: %s", e)
-            await update.message.reply_text("❌ An error occurred. Please try again.")
+            await update.message.reply_text(t("bot.error_occurred", lang=lang))
 
     async def handle_photo(self, update: Update, context):
         """Handle photo uploads (auth-gated)."""
-        if self.bot.auth_required and not self._is_authenticated(str(update.effective_user.id)):
-            await update.message.reply_text("🔐 Please authenticate first: send your email.")
+        user_id = str(update.effective_user.id)
+        lang = self._get_user_language(user_id)
+
+        if self.bot.auth_required and not self._is_authenticated(user_id):
+            domains = self._allowed_domains()
+            domains_hint = ""
+            if domains:
+                domains_hint = t("auth.domains_hint", lang=lang, domains=", ".join(domains))
+            await update.message.reply_text(
+                t("auth.required", lang=lang, domains_hint=domains_hint)
+            )
             return
 
         if not self.bot.enable_file_upload:
-            await update.message.reply_text("File uploads are disabled for this bot.")
+            await update.message.reply_text(t("bot.file_upload_disabled", lang=lang))
             return
 
         photo = update.message.photo[-1]  # highest resolution
@@ -719,7 +780,6 @@ class TelegramService:
         file_data = await file.download_as_bytearray()
 
         chat_id = str(update.effective_chat.id)
-        user_id = str(update.effective_user.id)
         username = update.effective_user.username
         caption = (update.message.caption or "").strip()
 
@@ -752,11 +812,11 @@ class TelegramService:
             user_id=f"telegram_{user_id}",
         )
         if not result:
-            await update.message.reply_text("❌ Failed to upload photo.")
+            await update.message.reply_text(t("bot.photo_upload_failed", lang=lang))
             return
 
-        # Save user-side message (caption or default)
-        user_text = caption if caption else "[uploaded photo]"
+        # Save user-side message
+        user_text = caption if caption else t("bot.uploaded_photo", lang=lang)
         user_message = Message(
             conversation_id=conversation.id,
             role="user",
@@ -771,9 +831,10 @@ class TelegramService:
             {"type": "image", "transfer_method": "local_file", "upload_file_id": result.get("id")}
         ]
 
-        query_text = caption or "Please analyze this image."
+        query_text = caption or t("bot.analyze_image", lang=lang)
         await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
+        # Process response
         response_text = ""
         message_id = None
         last_sent_text = None
@@ -818,8 +879,9 @@ class TelegramService:
                     self.db.commit()
 
                 elif event.get("event") == "error":
+                    error_msg = event.get('message', t('errors.generic_error', lang=lang))
                     await update.message.reply_text(
-                        f"❌ {event.get('message', 'An error occurred')}"
+                        t("errors.dify_error", lang=lang, message=error_msg)
                     )
                     return
 
@@ -836,13 +898,8 @@ class TelegramService:
                             if "Message is not modified" not in str(e):
                                 raise
             else:
-                await update.message.reply_text("I couldn't generate a response. Please try again.")
-        except BadRequest as e:
-            if "Message is not modified" in str(e):
-                logger.debug("Photo stream noop edit ignored")
-            else:
-                logger.error("Error handling photo message: %s", e)
-                await update.message.reply_text("❌ An error occurred. Please try again.")
+                await update.message.reply_text(t("bot.no_response", lang=lang))
+
         except Exception as e:
             logger.error("Error handling photo message: %s", e)
-            await update.message.reply_text("❌ An error occurred. Please try again.")
+            await update.message.reply_text(t("bot.error_occurred", lang=lang))
