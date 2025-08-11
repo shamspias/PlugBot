@@ -1,18 +1,28 @@
+x-env: &default-env
+  env_file:
+    - .env
+
+networks:
+  plugbot-network:
+
+volumes:
+  postgres_data:
+  redis_data:
+
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    <<: *default-env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-plugbot}
+      # keep image-specific init args here; everything else comes from .env
       POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "${POSTGRES_HOST_PORT:-5429}:5432"
+      - "${POSTGRES_HOST_PORT}:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-plugbot}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,11 +32,12 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    <<: *default-env
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     ports:
-      - "${REDIS_HOST_PORT:-6387}:6379"
+      - "${REDIS_HOST_PORT}:6379"
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
@@ -40,86 +51,64 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    <<: *default-env
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-      # Mailpit is optional but handy in dev for catching emails
+      # optional in dev, safe to keep
       mailpit:
         condition: service_started
-    environment:
-      # existing
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-plugbot}
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-plugbot-insecure-secret-change-this-in-production}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-plugbot-insecure-key-32-chars-here!!}
-      BACKEND_CORS_ORIGINS: '["http://localhost:${FRONTEND_PORT:-3514}","http://frontend:3000"]'
-      DEBUG: ${APP_DEBUG:-false}
-
-      # NEW: SMTP for email-based auth codes
-      # In dev with Mailpit set: SMTP_HOST=mailpit, SMTP_PORT=1025, SMTP_STARTTLS=false
-      # In prod with a real provider: set host/creds and keep SMTP_STARTTLS=true
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USERNAME: ${SMTP_USERNAME}
-      SMTP_PASSWORD: ${SMTP_PASSWORD}
-      SMTP_FROM: ${SMTP_FROM:-no-reply@yourdomain.com}
-      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
-
+    # all runtime env (DATABASE_URL, REDIS_URL, CORS, SMTP, etc.) come from .env
     ports:
-      - "${BACKEND_PORT:-8531}:8000"
+      - "${BACKEND_PORT}:8000"
     volumes:
-      - ./backend/app:/app/app:ro  # Mount app directory as read-only for development
+      - ./backend/app:/app/app:ro
       - ./backend/alembic:/app/alembic:ro
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
-    networks:
-      - plugbot-network
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - plugbot-network
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8531}/api/v1
+        # comes from .env; ensures `docker compose build` picks up changes
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     restart: unless-stopped
+    <<: *default-env
     depends_on:
       backend:
         condition: service_healthy
     ports:
-      - "${FRONTEND_PORT:-3514}:3000"
+      - "${FRONTEND_PORT}:3000"
     environment:
+      # keep NODE_ENV here or move to .env if you prefer
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8531}/api/v1
-    networks:
-      - plugbot-network
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000" ]
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - plugbot-network
 
-  # NEW: Local/dev SMTP sink with web UI. Open http://localhost:8025 to view OTP emails.
+  # local/dev SMTP sink with web UI
   mailpit:
     image: axllent/mailpit:latest
     restart: unless-stopped
     ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # Web UI
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
     networks:
       - plugbot-network
-
-volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-
-networks:
-  plugbot-network:
-    driver: bridge
