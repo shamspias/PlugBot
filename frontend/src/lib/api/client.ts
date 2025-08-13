@@ -10,9 +10,7 @@ class ApiClient {
         // - Keep HTTP for localhost regardless of page protocol
         // - Use HTTPS for production domains when page is HTTPS
         if (typeof window !== 'undefined') {
-            const isLocalhost =
-                apiUrl.includes('localhost') ||
-                apiUrl.includes('127.0.0.1');
+            const isLocalhost = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
             const pageIsHttps = window.location.protocol === 'https:';
 
             if (pageIsHttps && !isLocalhost) {
@@ -59,7 +57,7 @@ class ApiClient {
                 ...options?.headers,
             },
             // Use 'same-origin' for localhost, 'include' for cross-origin
-            credentials: this.baseUrl.includes('localhost') ? 'same-origin' : 'include',
+            credentials: this.baseUrl.includes('localhost') ? 'same-origin' : ('include' as RequestCredentials),
         });
 
         if (!response.ok) {
@@ -118,8 +116,23 @@ class ApiClient {
             method: 'POST',
             body: JSON.stringify({
                 token,
-                new_password: newPassword
-            })
+                new_password: newPassword,
+            }),
+        });
+    }
+
+    // --- New: profile & password management ---
+    async updateProfile(data: { username?: string; full_name?: string }): Promise<any> {
+        return this.request('/auth/me', {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async changePassword(data: { current_password: string; new_password: string }): Promise<any> {
+        return this.request('/auth/change-password', {
+            method: 'POST',
+            body: JSON.stringify(data),
         });
     }
 
@@ -184,6 +197,18 @@ class ApiClient {
     async getConversations(botId?: string): Promise<Conversation[]> {
         const params = botId ? `?bot_id=${encodeURIComponent(botId)}` : '';
         return this.request<Conversation[]>(`/conversations${params}`);
+    }
+
+    // ===== Admin / Settings endpoints =====
+    async getSettings(): Promise<any> {
+        return this.request('/admin/settings');
+    }
+
+    async updateSettings(data: { project_name?: string; allow_registration?: boolean }): Promise<any> {
+        return this.request('/admin/settings', {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
     }
 }
 
