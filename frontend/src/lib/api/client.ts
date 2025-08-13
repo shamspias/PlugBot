@@ -4,13 +4,26 @@ class ApiClient {
     private baseUrl: string;
 
     constructor() {
-        // Use the full HTTPS URL directly, no proxying
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8531/api/v1';
 
-        // Force HTTPS in production
-        if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-            this.baseUrl = apiUrl.replace(/^http:/, 'https:');
+        // Smart protocol detection:
+        // - Keep HTTP for localhost regardless of page protocol
+        // - Use HTTPS for production domains when page is HTTPS
+        if (typeof window !== 'undefined') {
+            const isLocalhost =
+                apiUrl.includes('localhost') ||
+                apiUrl.includes('127.0.0.1');
+            const pageIsHttps = window.location.protocol === 'https:';
+
+            if (pageIsHttps && !isLocalhost) {
+                // Only force HTTPS for non-localhost URLs when page is HTTPS
+                this.baseUrl = apiUrl.replace(/^http:/, 'https:');
+            } else {
+                // Keep the original protocol for localhost or when not HTTPS
+                this.baseUrl = apiUrl;
+            }
         } else {
+            // Server-side: use as configured
             this.baseUrl = apiUrl;
         }
 
@@ -45,8 +58,8 @@ class ApiClient {
                 ...this.getAuthHeaders(),
                 ...options?.headers,
             },
-            // Ensure credentials are included for CORS
-            credentials: 'include',
+            // Use 'same-origin' for localhost, 'include' for cross-origin
+            credentials: this.baseUrl.includes('localhost') ? 'same-origin' : 'include',
         });
 
         if (!response.ok) {
