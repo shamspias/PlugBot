@@ -1,3 +1,6 @@
+# Compose v2+ syntax (no explicit version key needed)
+
+# Reusable env-file anchor
 x-env: &default-env
   env_file:
     - .env
@@ -20,6 +23,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      # Optional but nice to have
+      TZ: ${TZ:-UTC}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -33,14 +38,41 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     healthcheck:
+      # 'ping' returns PONG when healthy
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - plugbot-network
+
+  # NEW: run DB migrations once, then exit successfully.
+  migrator:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: "no"
+    init: true
+    <<: *default-env
+    environment:
+      # only what the migrator actually needs
+      DATABASE_URL: ${DATABASE_URL}
+      TZ: ${TZ:-UTC}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head"
     networks:
       - plugbot-network
 
@@ -49,12 +81,15 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    init: true
     <<: *default-env
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
@@ -70,13 +105,19 @@ services:
       DEFAULT_LANGUAGE: ${DEFAULT_LANGUAGE}
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION}
       FRONTEND_URL: ${FRONTEND_URL}
+      TZ: ${TZ:-UTC}
     ports:
       - "${BACKEND_PORT}:8000"
+      # If you later add HTTPS termination inside the container, expose it here:
+      # - "${BACKEND_HTTPS_PORT:-8532}:8443"
     command: >
-      sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --proxy-headers
+      --forwarded-allow-ips='*'
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      test: [ "CMD", "curl", "-fsS", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -88,20 +129,23 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # CRITICAL: Pass the HTTPS URL at build time
+        # CRITICAL: build-time public URL for Next.js (must be HTTPS in prod)
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     restart: unless-stopped
+    init: true
     depends_on:
       backend:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      # Runtime environment (for reference, but build-time is what matters)
+      # Runtime exposure (handy for client-side fetches)
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      TZ: ${TZ:-UTC}
     ports:
       - "${FRONTEND_PORT}:3000"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:3000" ]
+      # Use a lightweight HEAD to the root (adjust to your /health route if you have one)
+      test: [ "CMD", "curl", "-fsS", "http://localhost:3000" ]
       interval: 30s
       timeout: 10s
       retries: 3
