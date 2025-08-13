@@ -1,14 +1,16 @@
 import secrets
 import string
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Any
 from sqlalchemy.orm import Session
+
 from ..core.config import settings
 from ..core.security import security_manager
 from ..models.user import User, PasswordResetToken, RefreshToken
 from ..schemas.auth import UserRegister, TokenResponse
 from ..utils.logger import get_logger
 from ..utils.mailer import send_email
+from .settings_service import settings_service
 
 logger = get_logger(__name__)
 
@@ -21,6 +23,9 @@ class AuthService:
         self.refresh_token_expire = timedelta(days=7)
         self.reset_token_expire = timedelta(hours=1)
 
+    # -----------------------
+    # User registration/login
+    # -----------------------
     def create_user(self, user_data: UserRegister, db: Session) -> User:
         """Create a new user."""
         # Check if user exists
@@ -59,7 +64,7 @@ class AuthService:
         return user
 
     def authenticate_user(self, email: str, password: str, db: Session) -> Optional[User]:
-        """Authenticate a user."""
+        """Authenticate a user by email + password."""
         user = db.query(User).filter(User.email == email).first()
 
         if not user:
@@ -77,14 +82,17 @@ class AuthService:
 
         return user
 
+    # ---------------
+    # Token management
+    # ---------------
     def create_tokens(self, user: User, db: Session) -> TokenResponse:
         """Create access and refresh tokens."""
         # Create access token
         access_token_data = {
-            "sub": user.id,
+            "sub": str(user.id),  # ensure string for JWT subject
             "email": user.email,
             "username": user.username,
-            "is_superuser": user.is_superuser
+            "is_superuser": user.is_superuser,
         }
         access_token = security_manager.create_access_token(
             access_token_data,
@@ -115,7 +123,7 @@ class AuthService:
         )
 
     def refresh_access_token(self, refresh_token: str, db: Session) -> Optional[TokenResponse]:
-        """Refresh access token using refresh token."""
+        """Refresh access token using a valid, unrevoked refresh token."""
         token = db.query(RefreshToken).filter(
             RefreshToken.token == refresh_token,
             RefreshToken.revoked == False,
@@ -136,6 +144,63 @@ class AuthService:
         # Create new tokens
         return self.create_tokens(user, db)
 
+    def revoke_refresh_token(self, refresh_token: str, db: Session) -> bool:
+        """Revoke a refresh token (logout)."""
+        token = db.query(RefreshToken).filter(
+            RefreshToken.token == refresh_token
+        ).first()
+
+        if token:
+            token.revoked = True
+            db.commit()
+            return True
+
+        return False
+
+    # ----------------
+    # Profile & Password
+    # ----------------
+    def update_profile(self, user_id: str, data: Any, db: Session) -> User:
+        """
+        Update basic profile fields (username, full_name).
+        `data` is expected to have `.username` and `.full_name` attributes (e.g., a Pydantic model).
+        """
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("User not found")
+
+        # Username uniqueness check
+        if getattr(data, "username", None) and data.username != user.username:
+            if db.query(User).filter(User.username == data.username).first():
+                raise ValueError("Username already taken")
+            user.username = data.username
+
+        if hasattr(data, "full_name"):
+            user.full_name = data.full_name
+
+        db.commit()
+        db.refresh(user)
+        return user
+
+    def change_password(self, user_id: str, current_password: str, new_password: str, db: Session) -> bool:
+        """Change a user's password after verifying the current one. Revokes all refresh tokens."""
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return False
+
+        if not security_manager.verify_password(current_password, user.hashed_password):
+            return False  # wrong current password
+
+        user.hashed_password = security_manager.hash_password(new_password)
+
+        # Revoke all refresh tokens so sessions are logged out
+        db.query(RefreshToken).filter(RefreshToken.user_id == user.id).update({"revoked": True})
+        db.commit()
+        return True
+
+    # ----------------
+    # Password reset
+    # ----------------
     def request_password_reset(self, email: str, db: Session) -> bool:
         """Request password reset."""
         user = db.query(User).filter(User.email == email).first()
@@ -218,26 +283,27 @@ class AuthService:
 
             # Plain text fallback
             text_body = f"""
-    Hello {user.full_name or user.username},
+Hello {user.full_name or user.username},
 
-    We received a request to reset your password for your PlugBot account.
+We received a request to reset your password for your PlugBot account.
 
-    Click the link below to reset your password:
-    {reset_url}
+Click the link below to reset your password:
+{reset_url}
 
-    This link will expire in 1 hour for security reasons.
+This link will expire in 1 hour for security reasons.
 
-    If you didn't request this password reset, please ignore this email. Your password won't be changed.
+If you didn't request this password reset, please ignore this email. Your password won't be changed.
 
-    Best regards,
-    The PlugBot Team
+Best regards,
+The PlugBot Team
             """
-
+            brand = settings_service.get(db).project_name
+            subject = f"Password Reset Request - {brand}"
             send_email(
                 to_email=user.email,
-                subject="Password Reset Request - PlugBot",
+                subject=subject,
                 body=text_body,
-                html_body=html_body  # You'll need to update the send_email function to support HTML
+                html_body=html_body  # Ensure send_email supports HTML
             )
         except Exception as e:
             logger.error(f"Failed to send password reset email: {e}")
@@ -275,32 +341,20 @@ class AuthService:
 
         return True
 
-    def revoke_refresh_token(self, refresh_token: str, db: Session) -> bool:
-        """Revoke a refresh token (logout)."""
-        token = db.query(RefreshToken).filter(
-            RefreshToken.token == refresh_token
-        ).first()
-
-        if token:
-            token.revoked = True
-            db.commit()
-            return True
-
-        return False
-
-    def _generate_token(self, length: int = 32) -> str:
-        """Generate a random token."""
-        alphabet = string.ascii_letters + string.digits
-        return ''.join(secrets.choice(alphabet) for _ in range(length))
-
+    # ----------------
+    # Email verification
+    # ----------------
     def _send_verification_email(self, user: User, db: Session):
-        """Send email verification."""
+        """Send email verification.
+
+        NOTE: This generates a token and sends it via email, but does not persist
+        a verification token record. Implement persistence + a verify endpoint
+        as needed in your project.
+        """
         # Generate verification token
         verification_token = self._generate_token(32)
 
-        # You can store this in a new table or reuse password_reset_tokens table
-        # For simplicity, let's reuse the password reset token table with a flag
-
+        # For simplicity, this example does not store the token.
         verification_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={verification_token}"
 
         html_body = f"""
@@ -342,16 +396,16 @@ class AuthService:
         """
 
         text_body = f"""
-    Welcome to PlugBot!
+Welcome to PlugBot!
 
-    Hello {user.full_name or user.username},
+Hello {user.full_name or user.username},
 
-    Thank you for registering with PlugBot. Please verify your email address by clicking the link below:
+Thank you for registering with PlugBot. Please verify your email address by clicking the link below:
 
-    {verification_url}
+{verification_url}
 
-    Best regards,
-    The PlugBot Team
+Best regards,
+The PlugBot Team
         """
 
         try:
@@ -363,6 +417,14 @@ class AuthService:
             )
         except Exception as e:
             logger.error(f"Failed to send verification email: {e}")
+
+    # ----------------
+    # Helpers
+    # ----------------
+    def _generate_token(self, length: int = 32) -> str:
+        """Generate a random URL-safe token."""
+        alphabet = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 
 auth_service = AuthService()

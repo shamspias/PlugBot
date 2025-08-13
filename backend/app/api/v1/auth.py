@@ -1,17 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
-from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from typing import Optional
+
 from ...api.deps import get_db, get_current_user
 from ...models.user import User
 from ...schemas.auth import (
     UserRegister, UserLogin, TokenResponse, UserResponse,
-    PasswordResetRequest, PasswordReset, RefreshTokenRequest
+    PasswordResetRequest, PasswordReset
 )
+from ...schemas.user import UserUpdate, PasswordChange
 from ...services.auth_service import auth_service
 from ...utils.logger import get_logger
 from ...core.config import settings
-import httpx
 
 logger = get_logger(__name__)
 
@@ -26,12 +25,12 @@ async def register(
     """Register a new user."""
     try:
         # Check if registration is allowed
+        from ...services.settings_service import settings_service
+
         user_count = db.query(User).count()
-        if user_count > 0 and not settings.ALLOW_REGISTRATION:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Registration is disabled"
-            )
+        app_settings = settings_service.get(db)
+        if user_count > 0 and not app_settings.allow_registration:
+            raise HTTPException(status_code=403, detail="Registration is disabled")
 
         user = auth_service.create_user(user_data, db)
         return UserResponse.from_orm(user)
@@ -148,7 +147,7 @@ async def forgot_password(
         db: Session = Depends(get_db)
 ):
     """Request password reset."""
-    success = auth_service.request_password_reset(data.email, db)
+    _ = auth_service.request_password_reset(data.email, db)
 
     # Always return success to prevent email enumeration
     return {
@@ -179,6 +178,41 @@ async def get_me(
 ):
     """Get current user info."""
     return UserResponse.from_orm(current_user)
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_me(
+        payload: UserUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Update current user's profile."""
+    try:
+        user = auth_service.update_profile(current_user.id, payload, db)
+        return UserResponse.from_orm(user)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/change-password")
+async def change_password(
+        payload: PasswordChange,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Change current user's password."""
+    ok = auth_service.change_password(
+        current_user.id,
+        payload.current_password,
+        payload.new_password,
+        db
+    )
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid current password"
+        )
+    return {"message": "Password updated"}
 
 
 @router.get("/verify")

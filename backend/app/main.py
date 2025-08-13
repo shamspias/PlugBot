@@ -4,7 +4,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from contextlib import asynccontextmanager
 from .core.config import settings
 from .core.database import Base, db_manager
-from .api.v1 import bots, conversations, webhooks, auth
+from .api.v1 import bots, conversations, webhooks, auth, admin as admin_router
 from .services.bot_manager import bot_manager
 from .models.bot import Bot
 from .utils.logger import get_logger
@@ -143,6 +143,7 @@ app.include_router(bots.router, prefix=settings.API_V1_STR)
 app.include_router(conversations.router, prefix=settings.API_V1_STR)
 app.include_router(webhooks.router, prefix=settings.API_V1_STR)
 app.include_router(auth.router, prefix=settings.API_V1_STR)
+app.include_router(admin_router.router, prefix=settings.API_V1_STR)
 
 
 # Root endpoint
