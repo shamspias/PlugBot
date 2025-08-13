@@ -86,32 +86,52 @@ app.add_middleware(
     allowed_hosts=["*"]  # Configure this based on your domains
 )
 
-# Configure CORS with explicit HTTPS support
+# -------------------------
+# Updated CORS configuration
+# -------------------------
+# Configure CORS with explicit support for both HTTP and HTTPS
 cors_origins = settings.BACKEND_CORS_ORIGINS
 
-# Ensure HTTPS versions of origins are included
-https_origins = []
+# Build comprehensive origins list
+allowed_origins = []
 for origin in cors_origins:
-    https_origins.append(origin)
-    # If an HTTP origin is specified, also add its HTTPS version
-    if origin.startswith("http://"):
-        https_origins.append(origin.replace("http://", "https://"))
-    # If no protocol is specified, add both
-    elif not origin.startswith("https://") and not origin.startswith("http://"):
-        https_origins.append(f"https://{origin}")
-        https_origins.append(f"http://{origin}")
+    # Clean up the origin
+    origin = origin.strip()
 
-# Add localhost for development
+    # Add the origin as-is
+    allowed_origins.append(origin)
+
+    # If it's a localhost origin, add both HTTP and HTTPS versions
+    if 'localhost' in origin or '127.0.0.1' in origin:
+        if origin.startswith('http://'):
+            allowed_origins.append(origin.replace('http://', 'https://'))
+        elif origin.startswith('https://'):
+            allowed_origins.append(origin.replace('https://', 'http://'))
+        elif not origin.startswith('http'):
+            allowed_origins.extend([f'http://{origin}', f'https://{origin}'])
+    # For non-localhost origins, ensure both protocols are allowed
+    elif origin.startswith('http://'):
+        allowed_origins.append(origin.replace('http://', 'https://'))
+    elif origin.startswith('https://'):
+        allowed_origins.append(origin.replace('https://', 'http://'))
+
+# Add common development ports
 if settings.DEBUG:
-    https_origins.extend([
-        "http://localhost:3000",
-        "http://localhost:3514",
-        "http://localhost:3001",
-    ])
+    dev_ports = ['3000', '3001', '3514', '8000', '8531']
+    for port in dev_ports:
+        allowed_origins.extend([
+            f'http://localhost:{port}',
+            f'https://localhost:{port}',
+            f'http://127.0.0.1:{port}',
+            f'https://127.0.0.1:{port}',
+        ])
+
+# Remove duplicates
+allowed_origins = list(set(allowed_origins))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=https_origins,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
