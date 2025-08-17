@@ -2,7 +2,7 @@ import React from 'react';
 import {useTranslations} from 'next-intl';
 import {BotCreate} from '@/types';
 import {Button} from '@/components/ui/button';
-import {Shield, Info} from 'lucide-react';
+import {Shield, Info, MessageSquare} from 'lucide-react';
 
 type T = ReturnType<typeof useTranslations>;
 
@@ -24,6 +24,7 @@ const BOOLEAN_KEYS = new Set<keyof BotCreate>([
     'enable_file_upload',
     'auth_required',
     'telegram_markdown_enabled',
+    'discord_markdown_enabled',
 ]);
 
 // Narrowed literal unions for select fields
@@ -41,12 +42,14 @@ class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
             dify_api_key: '',
             dify_type: 'chat',
             telegram_bot_token: '',
+            discord_bot_token: '',
             response_mode: 'streaming',
             auto_generate_title: true,
             enable_file_upload: true,
             auth_required: false,
             allowed_email_domains: '',
             telegram_markdown_enabled: false,
+            discord_markdown_enabled: false,
         };
 
         const incoming = props.initialData ?? {};
@@ -60,6 +63,8 @@ class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
         merged.auth_required = incoming.auth_required ?? defaults.auth_required;
         merged.telegram_markdown_enabled =
             incoming.telegram_markdown_enabled ?? defaults.telegram_markdown_enabled;
+        merged.discord_markdown_enabled =
+            incoming.discord_markdown_enabled ?? defaults.discord_markdown_enabled;
 
         this.state = {
             formData: merged,
@@ -108,6 +113,7 @@ class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
             dify_endpoint: clean(this.state.formData.dify_endpoint),
             dify_api_key: clean(this.state.formData.dify_api_key),
             telegram_bot_token: clean(this.state.formData.telegram_bot_token),
+            discord_bot_token: clean(this.state.formData.discord_bot_token),
             allowed_email_domains: clean(this.state.formData.allowed_email_domains),
         };
 
@@ -255,6 +261,44 @@ class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
                     </div>
                 </div>
 
+                {/* Discord Configuration */}
+                <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-[#5865F2]"/>
+                        Discord Configuration
+                    </h3>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Discord Bot Token (Optional)
+                        </label>
+                        <input
+                            type="password"
+                            name="discord_bot_token"
+                            value={formData.discord_bot_token}
+                            onChange={this.handleChange}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            placeholder="Enter your Discord bot token"
+                        />
+                        <p className="mt-2 text-sm text-gray-500">
+                            Get your bot token from the Discord Developer Portal
+                        </p>
+                    </div>
+
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            name="discord_markdown_enabled"
+                            checked={!!formData.discord_markdown_enabled}
+                            onChange={this.handleChange}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">
+                            Use Markdown formatting in Discord
+                        </span>
+                    </label>
+                </div>
+
                 {/* Advanced Settings */}
                 <div className="space-y-3">
                     <label className="flex items-center space-x-3 cursor-pointer">
@@ -266,8 +310,8 @@ class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
                             className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm font-medium text-gray-700">
-              {t('form.fields.autoGenerateTitle')}
-            </span>
+                            {t('form.fields.autoGenerateTitle')}
+                        </span>
                     </label>
 
                     <label className="flex items-center space-x-3 cursor-pointer">
@@ -279,8 +323,8 @@ class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
                             className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm font-medium text-gray-700">
-              {t('form.fields.enableFileUpload')}
-            </span>
+                            {t('form.fields.enableFileUpload')}
+                        </span>
                     </label>
 
                     <label className="flex items-center space-x-3 cursor-pointer">
@@ -292,8 +336,8 @@ class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
                             className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm font-medium text-gray-700">
-              {t('form.fields.telegramMarkdown')}
-            </span>
+                            {t('form.fields.telegramMarkdown')}
+                        </span>
                     </label>
                 </div>
 
@@ -329,8 +373,8 @@ class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
                             className="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm font-medium text-gray-700">
-              {t('form.fields.authRequired')}
-            </span>
+                            {t('form.fields.authRequired')}
+                        </span>
                     </label>
 
                     {formData.auth_required && (
