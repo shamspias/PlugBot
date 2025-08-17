@@ -15,6 +15,7 @@ import {
     Trash2,
     Activity,
     MessageCircle,
+    MessageSquare,
     Link,
 } from 'lucide-react';
 
@@ -185,6 +186,8 @@ class BotCardInner extends React.Component<BotCardInnerProps, BotCardState> {
                   </span>
                 </span>
                             </div>
+
+                            {/* Telegram */}
                             <div className="flex items-center space-x-2">
                                 <MessageCircle className="h-4 w-4 text-gray-400"/>
                                 <span className="text-sm">
@@ -200,6 +203,25 @@ class BotCardInner extends React.Component<BotCardInnerProps, BotCardState> {
                   </span>
                 </span>
                             </div>
+
+                            {/* Discord */}
+                            {bot.discord_bot_token && (
+                                <div className="flex items-center space-x-2">
+                                    <MessageSquare className="h-4 w-4 text-[#5865F2]"/>
+                                    <span className="text-sm">
+                    Discord:
+                    <span
+                        className={`ml-1 font-medium ${
+                            bot.is_discord_connected ? 'text-green-600' : 'text-gray-600'
+                        }`}
+                    >
+                      {bot.is_discord_connected
+                          ? t('bots.status.connected')
+                          : t('bots.status.notConfigured')}
+                    </span>
+                  </span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Actions */}
