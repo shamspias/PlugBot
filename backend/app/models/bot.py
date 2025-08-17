@@ -46,6 +46,15 @@ class Bot(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # Discord Configuration
+    discord_bot_token = Column(String(500))  # Encrypted
+    discord_bot_id = Column(String(255))
+    discord_bot_username = Column(String(255))
+    discord_webhook_secret = Column(String(255))
+    is_discord_connected = Column(Boolean, default=False)
+    discord_markdown_enabled = Column(Boolean, default=False)
+
     # Relationships
     conversations = relationship("Conversation", back_populates="bot", cascade="all, delete-orphan")
     auth_codes = relationship("AuthCode", back_populates="bot", cascade="all, delete-orphan")
+
