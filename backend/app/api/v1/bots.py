@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 import httpx
+import re
 
 from ...core.database import db_manager
 from ...core.security import security_manager
@@ -125,6 +126,17 @@ async def create_bot(bot_data: BotCreate, db: Session = Depends(db_manager.get_d
             logger.warning(f"Telegram token validation failed: {str(e)}")
             # Still create bot but without Telegram integration
 
+    # Add Discord token if provided
+    if getattr(bot_data, "discord_bot_token", None):
+        try:
+            discord_info = await validate_discord_token(bot_data.discord_bot_token)
+            bot.discord_bot_token = security_manager.encrypt_data(bot_data.discord_bot_token)
+            bot.discord_bot_id = discord_info.get("id")
+            bot.discord_bot_username = discord_info.get("username")
+        except Exception as e:
+            logger.warning(f"Discord token validation failed: {str(e)}")
+            # Still create bot but without Discord integration
+
     db.add(bot)
     db.commit()
     db.refresh(bot)
@@ -158,6 +170,43 @@ async def validate_telegram_token(token: str) -> dict:
         # Return a tiny struct we use above
         user = data.get("result") or {}
         return {"username": user.get("username"), "id": user.get("id")}
+
+
+async def validate_discord_token(token: str) -> dict:
+    """Validate a Discord bot token."""
+    if not token:
+        raise ValueError("Discord token is required")
+
+    # Discord tokens have a specific format
+    if not re.match(r'^[\w-]{24}\.[\w-]{6}\.[\w-]{27,}$', token):
+        raise ValueError("Invalid Discord token format")
+
+    # Test the token with Discord API
+    headers = {"Authorization": f"Bot {token}"}
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            response = await client.get(
+                "https://discord.com/api/v10/users/@me",
+                headers=headers
+            )
+
+            if response.status_code == 401:
+                raise ValueError("Invalid Discord bot token")
+            elif response.status_code != 200:
+                raise ValueError(f"Discord API error: {response.status_code}")
+
+            bot_info = response.json()
+            return {
+                "id": bot_info.get("id"),
+                "username": bot_info.get("username"),
+                "discriminator": bot_info.get("discriminator")
+            }
+        except httpx.ConnectError:
+            raise ValueError("Failed to connect to Discord API")
+        except httpx.TimeoutException:
+            raise ValueError("Discord API timeout")
+        except Exception as e:
+            raise ValueError(f"Discord validation failed: {str(e)}")
 
 
 @router.patch("/{bot_id}", response_model=BotResponse)
@@ -228,6 +277,10 @@ async def update_bot(
             update_data["telegram_bot_username"] = None
             update_data["is_telegram_connected"] = False
 
+    # NOTE: Discord update handling is not included per the requested change scope.
+    # If you later want to support updating/removing Discord tokens here,
+    # mirror the Telegram pattern above and call `validate_discord_token`.
+
     # Update bot
     for key, value in update_data.items():
         setattr(bot, key, value)
@@ -236,18 +289,18 @@ async def update_bot(
     db.commit()
     db.refresh(bot)
 
-    # Restart bot if it's running
+    # Restart bot if it's running (Telegram)
     should_have_token = bool(bot.telegram_bot_token)
-    status = bot_manager.get_bot_status(bot_id)
+    status_info = bot_manager.get_bot_status(bot_id)
 
     if should_have_token:
-        if status["is_running"]:
+        if status_info["is_running"]:
             await bot_manager.restart_bot(bot, db)
         else:
             await bot_manager.start_bot(bot, db)
     else:
         # If token has been removed, ensure the process is stopped
-        if status["is_running"]:
+        if status_info["is_running"]:
             await bot_manager.stop_bot(bot_id)
 
     return bot
