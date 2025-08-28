@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 
 
@@ -17,6 +17,11 @@ class BotBase(BaseModel):
     # Authentication settings
     auth_required: bool = False
     allowed_email_domains: Optional[str] = None  # Comma-separated domains like "algolyzer.com,google.com"
+
+    # Email template settings (NEW)
+    auth_email_subject_template: Optional[str] = None
+    auth_email_body_template: Optional[str] = None
+    auth_email_html_template: Optional[str] = None
 
 
 class BotCreate(BotBase):
@@ -60,6 +65,23 @@ class BotCreate(BotBase):
                 raise ValueError(f'Invalid domain format: {domain}')
         return ','.join(domains)
 
+    @field_validator('auth_email_subject_template', 'auth_email_body_template', 'auth_email_html_template')
+    def validate_email_templates(cls, v: Optional[str], field):
+        """Validate email templates contain required placeholders."""
+        if v is None or v.strip() == '':
+            return None
+
+        # Check for required placeholders based on field
+        if field.field_name == 'auth_email_subject_template':
+            # Subject can optionally use {bot_name}
+            pass  # No required placeholders for subject
+        else:
+            # Body templates must contain {code} placeholder
+            if '{code}' not in v:
+                raise ValueError(f'Email template must contain {{code}} placeholder for verification code')
+
+        return v.strip()
+
 
 class BotUpdate(BaseModel):
     """Schema for updating a bot."""
@@ -76,6 +98,11 @@ class BotUpdate(BaseModel):
     auth_required: Optional[bool] = None
     allowed_email_domains: Optional[str] = None
     telegram_markdown_enabled: Optional[bool] = None
+
+    # Email template settings (NEW)
+    auth_email_subject_template: Optional[str] = None
+    auth_email_body_template: Optional[str] = None
+    auth_email_html_template: Optional[str] = None
 
     @field_validator('dify_endpoint')
     def normalize_endpoint(cls, v: Optional[str]):
@@ -105,6 +132,23 @@ class BotUpdate(BaseModel):
             if '.' not in domain or len(domain) < 3:
                 raise ValueError(f'Invalid domain format: {domain}')
         return ','.join(domains)
+
+    @field_validator('auth_email_subject_template', 'auth_email_body_template', 'auth_email_html_template')
+    def validate_email_templates(cls, v: Optional[str], field):
+        """Validate email templates contain required placeholders."""
+        if v is None or v.strip() == '':
+            return None
+
+        # Check for required placeholders based on field
+        if field.field_name == 'auth_email_subject_template':
+            # Subject can optionally use {bot_name}
+            pass  # No required placeholders for subject
+        else:
+            # Body templates must contain {code} placeholder
+            if '{code}' not in v:
+                raise ValueError(f'Email template must contain {{code}} placeholder for verification code')
+
+        return v.strip()
 
 
 class BotResponse(BotBase):

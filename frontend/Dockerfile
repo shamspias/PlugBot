@@ -1,13 +1,51 @@
+# frontend/Dockerfile
 FROM node:20-alpine3.20 AS deps
-RUN apk update && apk add --no-cache libc6-compat
+
+# Add retry logic and use alternative mirrors if needed
+RUN set -ex && \
+    # Try to update and install packages with retries
+    for i in 1 2 3; do \
+        echo "Attempt $i of 3..." && \
+        apk update && \
+        apk add --no-cache libc6-compat && \
+        break || \
+        if [ $i -eq 3 ]; then \
+            echo "Failed after 3 attempts, trying alternative mirror..." && \
+            echo "https://mirror.leaseweb.com/alpine/v3.20/main" > /etc/apk/repositories && \
+            echo "https://mirror.leaseweb.com/alpine/v3.20/community" >> /etc/apk/repositories && \
+            apk update && \
+            apk add --no-cache libc6-compat; \
+        else \
+            echo "Retrying in 5 seconds..." && \
+            sleep 5; \
+        fi; \
+    done
+
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Use the same base for other stages
+# Builder stage
 FROM node:20-alpine3.20 AS builder
-# Optional but handy if any native deps compile during build
-RUN apk update && apk add --no-cache libc6-compat
+
+# Add retry logic for builder stage too
+RUN set -ex && \
+    for i in 1 2 3; do \
+        echo "Attempt $i of 3..." && \
+        apk update && \
+        apk add --no-cache libc6-compat && \
+        break || \
+        if [ $i -eq 3 ]; then \
+            echo "Failed after 3 attempts, trying alternative mirror..." && \
+            echo "https://mirror.leaseweb.com/alpine/v3.20/main" > /etc/apk/repositories && \
+            echo "https://mirror.leaseweb.com/alpine/v3.20/community" >> /etc/apk/repositories && \
+            apk update && \
+            apk add --no-cache libc6-compat; \
+        else \
+            echo "Retrying in 5 seconds..." && \
+            sleep 5; \
+        fi; \
+    done
 
 # Accept build argument and set as environment variable
 ARG NEXT_PUBLIC_API_URL
@@ -23,9 +61,27 @@ COPY . .
 # Build the application with the environment variable
 RUN npm run build
 
+# Runner stage
 FROM node:20-alpine3.20 AS runner
-# Runtime libc compatibility in case native modules need it
-RUN apk update && apk add --no-cache libc6-compat
+
+# Add retry logic for runner stage
+RUN set -ex && \
+    for i in 1 2 3; do \
+        echo "Attempt $i of 3..." && \
+        apk update && \
+        apk add --no-cache libc6-compat && \
+        break || \
+        if [ $i -eq 3 ]; then \
+            echo "Failed after 3 attempts, trying alternative mirror..." && \
+            echo "https://mirror.leaseweb.com/alpine/v3.20/main" > /etc/apk/repositories && \
+            echo "https://mirror.leaseweb.com/alpine/v3.20/community" >> /etc/apk/repositories && \
+            apk update && \
+            apk add --no-cache libc6-compat; \
+        else \
+            echo "Retrying in 5 seconds..." && \
+            sleep 5; \
+        fi; \
+    done
 
 WORKDIR /app
 

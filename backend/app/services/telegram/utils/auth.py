@@ -1,10 +1,10 @@
-"""Authentication utilities for Telegram bot."""
+"""Authentication utilities for Telegram bot with custom email templates."""
 
 import json
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import List
+from typing import List, Optional
 
 import redis
 from telegram import Update
@@ -75,6 +75,96 @@ class AuthManager:
             )
         )
 
+    def _get_email_content(self, code: str, lang: str) -> tuple[str, str, Optional[str]]:
+        """
+        Get email subject, body, and HTML body for authentication code.
+        Uses custom templates if configured, otherwise falls back to default i18n.
+
+        Returns:
+            tuple of (subject, plain_body, html_body)
+        """
+        bot_name = self.bot.name
+
+        # Check if bot has custom templates
+        has_custom_template = (
+                self.bot.auth_email_subject_template or
+                self.bot.auth_email_body_template or
+                self.bot.auth_email_html_template
+        )
+
+        if has_custom_template:
+            # Use custom templates
+            # Subject
+            if self.bot.auth_email_subject_template:
+                subject = self.bot.auth_email_subject_template.format(
+                    bot_name=bot_name,
+                    code=code
+                )
+            else:
+                subject = t("auth.email_subject", lang=lang, bot_name=bot_name)
+
+            # Plain text body
+            if self.bot.auth_email_body_template:
+                body = self.bot.auth_email_body_template.format(
+                    bot_name=bot_name,
+                    code=code
+                )
+            else:
+                body = t("auth.email_body", lang=lang, code=code)
+
+            # HTML body (optional)
+            html_body = None
+            if self.bot.auth_email_html_template:
+                html_body = self.bot.auth_email_html_template.format(
+                    bot_name=bot_name,
+                    code=code
+                )
+
+            return subject, body, html_body
+
+        else:
+            # Use default i18n templates
+            subject = t("auth.email_subject", lang=lang, bot_name=bot_name)
+            body = t("auth.email_body", lang=lang, code=code)
+
+            # Default HTML template
+            html_body = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                    .content {{ background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }}
+                    .code-box {{ background: white; border: 2px solid #667eea; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }}
+                    .code {{ font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 3px; }}
+                    .footer {{ text-align: center; margin-top: 30px; color: #666; font-size: 12px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>{bot_name}</h1>
+                        <p style="margin: 0; opacity: 0.9;">Verification Code</p>
+                    </div>
+                    <div class="content">
+                        <p>Your verification code is:</p>
+                        <div class="code-box">
+                            <div class="code">{code}</div>
+                        </div>
+                        <p>This code expires in 5 minutes.</p>
+                        <div class="footer">
+                            <p>If you didn't request this code, please ignore this email.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+
+            return subject, body, html_body
+
     async def auth_gate(self, update: Update, context: ContextTypes.DEFAULT_TYPE, lang: str) -> bool:
         """
         Check if user is authorized to use the bot.
@@ -136,7 +226,7 @@ class AuthManager:
             return False
 
     async def _handle_email_auth(self, user_id: str, email: str, update: Update, lang: str) -> bool:
-        """Handle email authentication request."""
+        """Handle email authentication request with custom templates."""
         if not self.email_ok_for_bot(email):
             domains = ", ".join(self.get_allowed_domains()) or "(none configured)"
             await update.message.reply_text(
@@ -159,13 +249,17 @@ class AuthManager:
 
         self.redis.setex(self._pending_key(user_id), 300, email)
 
+        # Get email content (with custom templates if configured)
+        subject, body, html_body = self._get_email_content(code, lang)
+
         # Send email with code
         try:
             from ....utils.mailer import send_email
             send_email(
                 to_email=email,
-                subject=t("auth.email_subject", lang=lang, bot_name=self.bot.name),
-                body=t("auth.email_body", lang=lang, code=code),
+                subject=subject,
+                body=body,
+                html_body=html_body  # Can be None if not using HTML template
             )
         except Exception as e:
             logger.error("Failed to send code to %s: %s", email, e)

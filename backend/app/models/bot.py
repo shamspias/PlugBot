@@ -38,9 +38,14 @@ class Bot(Base):
     auto_generate_title = Column(Boolean, default=True)
     enable_file_upload = Column(Boolean, default=True)
 
-    # Authentication Settings (New)
+    # Authentication Settings
     auth_required = Column(Boolean, default=False)
     allowed_email_domains = Column(Text)  # Comma-separated list of domains
+
+    # Email Template Settings (NEW)
+    auth_email_subject_template = Column(Text)  # Custom email subject template
+    auth_email_body_template = Column(Text)  # Custom plain text email template
+    auth_email_html_template = Column(Text)  # Custom HTML email template
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

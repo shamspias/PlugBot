@@ -2,7 +2,7 @@ import React from 'react';
 import {useTranslations} from 'next-intl';
 import {BotCreate} from '@/types';
 import {Button} from '@/components/ui/button';
-import {Shield, Info} from 'lucide-react';
+import {Shield, Info, Mail, Code} from 'lucide-react';
 
 type T = ReturnType<typeof useTranslations>;
 
@@ -16,6 +16,8 @@ interface BotFormInnerProps {
 interface BotFormState {
     formData: BotCreate;
     showAuthHelp: boolean;
+    showEmailTemplateHelp: boolean;
+    emailTemplateTab: 'subject' | 'body' | 'html';
 }
 
 // Keys that are booleans in BotCreate
@@ -47,6 +49,9 @@ class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
             auth_required: false,
             allowed_email_domains: '',
             telegram_markdown_enabled: false,
+            auth_email_subject_template: '',
+            auth_email_body_template: '',
+            auth_email_html_template: '',
         };
 
         const incoming = props.initialData ?? {};
@@ -64,6 +69,8 @@ class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
         this.state = {
             formData: merged,
             showAuthHelp: false,
+            showEmailTemplateHelp: false,
+            emailTemplateTab: 'body',
         };
     }
 
@@ -109,13 +116,16 @@ class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
             dify_api_key: clean(this.state.formData.dify_api_key),
             telegram_bot_token: clean(this.state.formData.telegram_bot_token),
             allowed_email_domains: clean(this.state.formData.allowed_email_domains),
+            auth_email_subject_template: clean(this.state.formData.auth_email_subject_template),
+            auth_email_body_template: clean(this.state.formData.auth_email_body_template),
+            auth_email_html_template: clean(this.state.formData.auth_email_html_template),
         };
 
         this.props.onSubmit(payload);
     };
 
     render() {
-        const {formData, showAuthHelp} = this.state;
+        const {formData, showAuthHelp, showEmailTemplateHelp, emailTemplateTab} = this.state;
         const {onCancel, t} = this.props;
 
         return (
@@ -334,22 +344,164 @@ class BotFormInner extends React.Component<BotFormInnerProps, BotFormState> {
                     </label>
 
                     {formData.auth_required && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                {t('form.fields.allowedDomains')}
-                            </label>
-                            <input
-                                type="text"
-                                name="allowed_email_domains"
-                                value={formData.allowed_email_domains}
-                                onChange={this.handleChange}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                placeholder={t('form.fields.allowedDomainsPlaceholder')}
-                            />
-                            <p className="mt-2 text-sm text-gray-500">
-                                {t('form.fields.allowedDomainsHelp')}
-                            </p>
-                        </div>
+                        <>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    {t('form.fields.allowedDomains')}
+                                </label>
+                                <input
+                                    type="text"
+                                    name="allowed_email_domains"
+                                    value={formData.allowed_email_domains}
+                                    onChange={this.handleChange}
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    placeholder={t('form.fields.allowedDomainsPlaceholder')}
+                                />
+                                <p className="mt-2 text-sm text-gray-500">
+                                    {t('form.fields.allowedDomainsHelp')}
+                                </p>
+                            </div>
+
+                            {/* Email Template Settings (NEW) */}
+                            <div className="border-t pt-4">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="text-md font-medium text-gray-900 flex items-center gap-2">
+                                        <Mail className="h-4 w-4 text-purple-600"/>
+                                        Custom Email Templates
+                                    </h4>
+                                    <button
+                                        type="button"
+                                        onClick={() => this.setState({showEmailTemplateHelp: !showEmailTemplateHelp})}
+                                        className="text-purple-600 hover:text-purple-700"
+                                    >
+                                        <Info className="h-4 w-4"/>
+                                    </button>
+                                </div>
+
+                                {showEmailTemplateHelp && (
+                                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg mb-4">
+                                        <p className="text-sm text-purple-800 mb-2">
+                                            Customize the email sent to users for authentication. Available
+                                            placeholders:
+                                        </p>
+                                        <ul className="text-sm text-purple-700 space-y-1">
+                                            <li>• <code className="bg-purple-100 px-1 rounded">{'{code}'}</code> - The
+                                                6-digit verification code (required in body)
+                                            </li>
+                                            <li>• <code className="bg-purple-100 px-1 rounded">{'{bot_name}'}</code> -
+                                                The name of your bot
+                                            </li>
+                                        </ul>
+                                        <p className="text-sm text-purple-700 mt-2">
+                                            Leave empty to use default templates.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Tab selector */}
+                                <div className="flex space-x-2 mb-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => this.setState({emailTemplateTab: 'subject'})}
+                                        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                                            emailTemplateTab === 'subject'
+                                                ? 'bg-purple-600 text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        Subject
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => this.setState({emailTemplateTab: 'body'})}
+                                        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                                            emailTemplateTab === 'body'
+                                                ? 'bg-purple-600 text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        Text Body
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => this.setState({emailTemplateTab: 'html'})}
+                                        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                                            emailTemplateTab === 'html'
+                                                ? 'bg-purple-600 text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        HTML Body
+                                    </button>
+                                </div>
+
+                                {/* Template editors */}
+                                {emailTemplateTab === 'subject' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Email Subject Template
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="auth_email_subject_template"
+                                            value={formData.auth_email_subject_template || ''}
+                                            onChange={this.handleChange}
+                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all font-mono text-sm"
+                                            placeholder="Your {bot_name} verification code"
+                                        />
+                                    </div>
+                                )}
+
+                                {emailTemplateTab === 'body' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Email Text Body Template
+                                        </label>
+                                        <textarea
+                                            name="auth_email_body_template"
+                                            value={formData.auth_email_body_template || ''}
+                                            onChange={this.handleChange}
+                                            rows={6}
+                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none font-mono text-sm"
+                                            placeholder={`Для завершения авторизации в Telegram-боте необходимо подтвердить ваш адрес электронной почты.
+
+Код подтверждения: {code}
+
+Срок действия кода — 5 минут.`}
+                                        />
+                                    </div>
+                                )}
+
+                                {emailTemplateTab === 'html' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Email HTML Body Template (optional)
+                                        </label>
+                                        <div className="relative">
+                                            <Code className="absolute left-3 top-3 w-4 h-4 text-gray-400"/>
+                                            <textarea
+                                                name="auth_email_html_template"
+                                                value={formData.auth_email_html_template || ''}
+                                                onChange={this.handleChange}
+                                                rows={10}
+                                                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none font-mono text-xs"
+                                                placeholder={`<html>
+<body style="font-family: Arial, sans-serif;">
+    <h2>{bot_name} - Verification Code</h2>
+    <p>Your verification code is:</p>
+    <h1 style="color: #667eea; letter-spacing: 3px;">{code}</h1>
+    <p>This code expires in 5 minutes.</p>
+</body>
+</html>`}
+                                            />
+                                        </div>
+                                        <p className="mt-2 text-xs text-gray-500">
+                                            HTML template for rich email formatting. Leave empty to use plain text only.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </>
                     )}
                 </div>
 

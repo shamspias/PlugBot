@@ -16,6 +16,9 @@ export interface Bot {
     health_status: 'healthy' | 'unhealthy' | 'unknown';
     auth_required: boolean;
     allowed_email_domains?: string;
+    auth_email_subject_template?: string;
+    auth_email_body_template?: string;
+    auth_email_html_template?: string;
     created_at: string;
     updated_at?: string;
 }
@@ -33,6 +36,9 @@ export interface BotCreate {
     telegram_markdown_enabled: boolean;
     auth_required: boolean;
     allowed_email_domains?: string;
+    auth_email_subject_template?: string;
+    auth_email_body_template?: string;
+    auth_email_html_template?: string;
 }
 
 export interface BotStatus {
