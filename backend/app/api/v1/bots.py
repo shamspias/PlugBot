@@ -394,16 +394,54 @@ async def validate_dify_connection(endpoint: str, api_key: str) -> bool:
     """Validate Dify endpoint and API key."""
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
-            # Try to access the Dify API parameters endpoint
+            # First try the /info endpoint which should work with authorization
+            # According to Dify docs, this is a valid authenticated endpoint
             response = await client.get(
-                f"{endpoint.rstrip('/')}/parameters",
+                f"{endpoint.rstrip('/')}/info",
                 headers={"Authorization": f"Bearer {api_key}"}
             )
 
             if response.status_code == 401:
                 raise ValueError("Invalid API key")
             elif response.status_code == 404:
-                raise ValueError("Invalid endpoint - API not found")
+                # If /info doesn't exist, try /parameters without auth
+                # Some Dify versions might not have /info
+                response = await client.get(
+                    f"{endpoint.rstrip('/')}/parameters"
+                )
+                if response.status_code == 404:
+                    raise ValueError("Invalid endpoint - API not found")
+                elif response.status_code != 200:
+                    # Try with auth as fallback
+                    response = await client.get(
+                        f"{endpoint.rstrip('/')}/parameters",
+                        headers={"Authorization": f"Bearer {api_key}"}
+                    )
+                    if response.status_code == 401:
+                        raise ValueError("Invalid API key")
+                    elif response.status_code != 200:
+                        raise ValueError(f"Unexpected response: {response.status_code}")
+            elif response.status_code == 400:
+                # 400 might mean wrong format, try alternate validation
+                # Try to send a minimal chat message to validate
+                test_payload = {
+                    "inputs": {},
+                    "query": "test",
+                    "response_mode": "blocking",
+                    "user": "validation-test"
+                }
+                response = await client.post(
+                    f"{endpoint.rstrip('/')}/chat-messages",
+                    json=test_payload,
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=5.0
+                )
+                if response.status_code == 401:
+                    raise ValueError("Invalid API key")
+                elif response.status_code in [200, 400]:  # 400 might mean app config issue but auth works
+                    return True
+                else:
+                    raise ValueError(f"Unexpected response: {response.status_code}")
             elif response.status_code != 200:
                 raise ValueError(f"Unexpected response: {response.status_code}")
 
@@ -413,4 +451,5 @@ async def validate_dify_connection(endpoint: str, api_key: str) -> bool:
         except httpx.TimeoutException:
             raise ValueError("Connection timeout - endpoint not responding")
         except Exception as e:
+            logger.error(f"Validation error details: {str(e)}")
             raise ValueError(f"Connection failed: {str(e)}")
