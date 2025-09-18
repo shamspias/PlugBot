@@ -134,11 +134,26 @@ class DifyService:
 
     async def health_check(self) -> bool:
         """Check if Dify API is accessible."""
-        url = f"{self.endpoint}/parameters"
+        # Try the /info endpoint first as it's more reliable
+        urls_to_try = [
+            f"{self.endpoint}/info",
+            f"{self.endpoint}/parameters"
+        ]
 
-        try:
-            response = await self.client.get(url, headers=self.headers, timeout=5.0)
-            return response.status_code == 200
-        except Exception as e:
-            logger.error(f"Health check failed for bot {self.bot.name}: {str(e)}")
-            return False
+        for url in urls_to_try:
+            try:
+                # Try with auth first
+                response = await self.client.get(url, headers=self.headers, timeout=5.0)
+                if response.status_code == 200:
+                    return True
+                # If auth fails with 401/403, try without auth for /parameters
+                if response.status_code in [401, 403] and url.endswith('/parameters'):
+                    response = await self.client.get(url, timeout=5.0)
+                    if response.status_code == 200:
+                        return True
+            except Exception as e:
+                logger.debug(f"Health check failed for {url}: {str(e)}")
+                continue
+
+        logger.error(f"Health check failed for bot {self.bot.name}: All endpoints failed")
+        return False
